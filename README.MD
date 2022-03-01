@@ -11,14 +11,17 @@ Essentially this exists to act as both a target language, and source language fo
 Includes support for GP-x64 registers only.
 
 ### Syntax
+```
 $123	- Numerical values prefixed with $
 $xFF	- Hexidecimal values prefixed with $x
 rax	- Registers prefixed with %
 \*rax		- Dereferencing pointer values prefixed with \* (i.e. deref rax)
 lbl		- Label. No special syntax
 \# rem	- Comments prefixed with \#
+```
 
 ### Instruction set
+```
 ADD {reg64a}, {reg64b} 	- {reg64a} + {reg64b}
 SUB {reg64a}, {reg64b} 	- {reg64a} - {reg64b}
 MUL {reg64a}, {reg64b} 	- {reg64a} * {reg64b}
@@ -28,6 +31,7 @@ MOV	{reg64a}, {reg64b}	- {reg64a} := {reg64b}
 
 CALL {label}			- Branch to {label}, return to address
 JMP {label}				- Branch to {label}
+```
 
 ### Extensions/Abstractions
 
