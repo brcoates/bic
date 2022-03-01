@@ -17,3 +17,7 @@ bic
 
 *.vcxproj*
 *.sln
+
+.bic.dir/
+bin/
+x64
