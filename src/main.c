@@ -5,7 +5,7 @@
 #include <include/scan.h>
 #include <include/parse.h>
 
-void print_node(node_t* root, char* prefix);
+void print_node(node_t* root, char* prefix, int n);
 
 int main(int argc, char** argv) {
 
@@ -25,26 +25,27 @@ int main(int argc, char** argv) {
 
 	printf("Parsing...\n");
 	parse_t* parse_root = parse(scan);
-	print_node(parse_root->node_head, "");
+	print_node(parse_root->node_head, "", 0);
 
 	return 0;
 }
 
-void print_node(node_t* root, char* prefix) {
+void print_node(node_t* root, char* prefix, int n) {
 	size_t new_prefix_len = strlen(prefix) + 2;
 	char* new_prefix = calloc(new_prefix_len, sizeof(char));
 	for (int i = 0; i < new_prefix_len; i++) {
 		new_prefix[i] = ' ';
 	}
 
+	printf("%s%d ", prefix, n);
+
 	// basically, if we have a token, print this out and/or along with the node type
 	if (root->token != NULL)
-		printf("%s%s (%s)", prefix, root->token->str, token_gettypename(root->token->type));
+		printf("%s (%s)", root->token->str, token_gettypename(root->token->type));
 
 	// now we grab the type
 	printf(
-		"%s%s%s\n", 
-		root->token == NULL ? prefix : " ", 
+		"%s%s\n", 
 		root->token != NULL ? ": " : "",
 		parse_getnodetypename(root->type)
 	);
@@ -52,7 +53,9 @@ void print_node(node_t* root, char* prefix) {
 	// and do the body if we have one
 	if (root->body != NULL) {
 		printf("%s->\n", prefix);
-		print_node(root->body, new_prefix);
+		print_node(root->body, new_prefix, 0);
 	}
-	if (root->next != NULL) print_node(root->next, prefix);
+	if (root->next != NULL) print_node(root->next, prefix, n + 1);
+
+	free(new_prefix);
 }

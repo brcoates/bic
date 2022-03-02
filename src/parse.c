@@ -35,6 +35,7 @@ node_t* parse_block() {
 	
 	node_t* root = parse_createnode(NT_BODY);
 	node_t* next_node = root;
+	bool is_first = true;
 
 	do {
 		node_t* curr_node = NULL;
@@ -54,8 +55,14 @@ node_t* parse_block() {
 		}
 
 		// this will allow us to continually chain nodes
-		next_node->next = curr_node;
+		if (is_first) {
+			next_node->body = curr_node;
+		} else {
+			next_node->next = curr_node;
+		}
 		next_node = curr_node;
+
+		is_first = false;
 	} while (next_node != NULL && parse_canmovenext());
 
 	return root;
