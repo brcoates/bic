@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <include/reg.h>
 
-const char* reg_getname(reg_t reg) {
+const char* reg_getname(regtype_t reg) {
 	switch (reg) {
 		case R_RAX: return "rax";
 		case R_RBX: return "rbx";
@@ -17,4 +17,19 @@ const char* reg_getname(reg_t reg) {
         case R_R15: return "r15";
         default: return NULL;
 	}
+}
+
+list_t* reg_getall() {
+	list_t* reg_list = list_create();
+	for (int i = 0; i < R_R15; i++) list_additem(reg_list, reg_create(i));
+	return reg_list;
+}
+
+reg_t* reg_create(regtype_t type) {
+	reg_t* reg = calloc(1, sizeof(reg_t));
+	reg->type = type;
+	reg->name = (char*) reg_getname(type);
+	reg->sz = 64; // all are 64 for the time being
+
+	return reg;
 }

@@ -8,7 +8,6 @@
 void print_node(node_t* root, char* prefix, int n);
 
 int main(int argc, char** argv) {
-
 	FILE* fp = fopen("/Users/ben/dev/bic/data/test.txt", "r");
 	if (fp == NULL) {
 		fprintf(stderr, "Error opening file.\n");
@@ -40,8 +39,7 @@ void print_node(node_t* root, char* prefix, int n) {
 	printf("%s%d ", prefix, n);
 
 	// basically, if we have a token, print this out and/or along with the node type
-	if (root->token != NULL)
-		printf("%s (%s)", root->token->str, token_gettypename(root->token->type));
+	if (root->token != NULL) printf("%s (%s)", root->token->str, token_gettypename(root->token->type));
 
 	// now we grab the type
 	printf(
