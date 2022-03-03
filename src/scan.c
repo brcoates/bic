@@ -105,8 +105,7 @@ toktype_t token_gettype(const char* token) {
     if (tok_len >= 2 && token[0] == '\"' && token[tok_len - 1] == '\"') return TT_STRING;
 
     for (int i = 0; i < R_R15; i++) {
-        reg_t reg = i;
-        const char* reg_name = reg_getname(reg);
+        const char* reg_name = reg_getname((regtype_t) i);
         if (reg_name != NULL && strcmp(lower_token, reg_name) == 0) return TT_REG;
     }
 

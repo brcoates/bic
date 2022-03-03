@@ -7,13 +7,13 @@
 opcode_t opcode_getopcodetype(char* str) {
 	char* str_lower = s_tolower(str);
 
-	if (strcmp(str_lower, "ADD") == 0) return OP_ADD;
-	if (strcmp(str_lower, "SUB") == 0) return OP_SUB;
-	if (strcmp(str_lower, "MUL") == 0) return OP_MUL;
-	if (strcmp(str_lower, "DIV") == 0) return OP_DIV;
-	if (strcmp(str_lower, "MOV") == 0) return OP_MOV;
-	if (strcmp(str_lower, "CMP") == 0) return OP_CMP;
-	if (strcmp(str_lower, "JMP") == 0) return OP_JMP;
+	if (strcmp(str_lower, "add") == 0) return OP_ADD;
+	if (strcmp(str_lower, "sub") == 0) return OP_SUB;
+	if (strcmp(str_lower, "mul") == 0) return OP_MUL;
+	if (strcmp(str_lower, "div") == 0) return OP_DIV;
+	if (strcmp(str_lower, "mov") == 0) return OP_MOV;
+	if (strcmp(str_lower, "cmp") == 0) return OP_CMP;
+	if (strcmp(str_lower, "jmp") == 0) return OP_JMP;
 	return OP_UNKNOWN;
 }
 

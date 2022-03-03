@@ -4,6 +4,7 @@
 
 #include <include/scan.h>
 #include <include/parse.h>
+#include <include/asm.h>
 
 void print_node(node_t* root, char* prefix, int n);
 
@@ -25,6 +26,9 @@ int main(int argc, char** argv) {
 	printf("Parsing...\n");
 	parse_t* parse_root = parse(scan);
 	print_node(parse_root->node_head, "", 0);
+
+	char* asm_output = asm_codegen(parse_root);
+	printf("\nasm:\n%s", asm_output);
 
 	return 0;
 }

@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <include/list.h>
 
-typedef enum regtype {
+typedef enum {
 	R_RAX,
 	R_RBX,
 	R_RCX,
@@ -16,16 +16,20 @@ typedef enum regtype {
 	R_R12,
 	R_R13,
 	R_R14,
-	R_R15
+	R_R15,
+	R_UNKNOWN
 } regtype_t;
 
-typedef struct reg {
+typedef struct {
 	char* name;
 	regtype_t type;
 	size_t sz;
 } reg_t;
 
 const char* reg_getname(regtype_t reg);
+unsigned int reg_getsize(regtype_t reg);
+regtype_t reg_gettype(char* str);
+
 list_t* reg_getall();
 
 reg_t* reg_create(regtype_t type);

@@ -2,6 +2,8 @@
 #define OPCODE_H
 
 #include <stdbool.h>
+#include <include/list.h>
+#include <include/operand.h>
 
 typedef enum opcode {
 	OP_ADD,
@@ -18,5 +20,7 @@ opcode_t opcode_getopcodetype(char* str);
 const char* opcode_gettypename(opcode_t opcode);
 
 bool opcode_isopcode(char* str);
+
+list_t* opcode_goperands(opcode_t op);
 
 #endif
