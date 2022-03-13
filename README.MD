@@ -5,6 +5,19 @@ Basic Instruction Compiler. The idea is to present an intermediate language that
 
 Essentially this exists to act as both a target language, and source language for compiler projects.
 
+## Compiling
+To compile, run the following under a unix based system. Originally developed on OSX with CMake.
+```
+./configure.sh
+./build.sh
+```
+
+To test, run: 
+```
+./configure.sh
+./test.sh
+```
+
 ## Architecture
 
 ### Registers
