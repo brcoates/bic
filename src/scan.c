@@ -5,6 +5,7 @@
 #include <include/scan.h>
 #include <include/reg.h>
 #include <include/opcode.h>
+#include <include/primitive.h>
 #include <include/s_util.h>
 
 scan_t* scan_file(FILE* fp) {
@@ -95,6 +96,7 @@ toktype_t token_gettype(const char* token) {
     char* lower_token = s_tolower((char*) token);
 
 	if (opcode_isopcode((char*) token)) return TT_OPCODE;
+	if (prim_isprimitive((char*) token)) return TT_KEYWORD_PRIMTYPE;
 
     if (token[0] == ';') return TT_SEMICOLON;
     if (token[0] == ':') return TT_COLON;
@@ -137,6 +139,7 @@ const char* token_gettypename(toktype_t type) {
         case TT_KEYWORD_ELSE: return "TT_KEYWORD_ELSE";
         case TT_KEYWORD_ENDIF: return "TT_KEYWORD_ENDIF";
 		case TT_OPCODE: return "TT_OPCODE";
+		case TT_KEYWORD_PRIMTYPE: return "TT_KEYWORD_PRIMTYPE";
 		case TT_UNKNOWN: return "TT_UNKNOWN";
         default: return "??";
     }

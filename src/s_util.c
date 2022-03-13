@@ -35,3 +35,15 @@ char* s_tolower(char* str) {
 	}
 	return str_lower;
 }
+
+bool s_eqi(char* str1, char* str2) {
+	char* str1_low = s_tolower(str1);
+	char* str2_low = s_tolower(str2);
+	return s_eq(str1_low, str2_low);
+}
+
+bool s_eq(char* str1, char* str2) {
+	return strcmp(str1, str2) == 0;
+}
+
+

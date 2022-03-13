@@ -16,7 +16,10 @@ typedef enum nodetype {
     NT_OPCODE,
     NT_OPERAND,
     NT_LABEL,
-	NT_OPERAND_LIST
+	NT_OPERAND_LIST,
+	NT_LOCALVARDECL,
+	NT_PROC_ARGS_LIST,
+	NT_PROC_ARG
 } nodetype_t;
 
 struct node {
@@ -42,8 +45,11 @@ void parse_setstate(scan_t* scan);
 parse_t* parse(scan_t* scan);
 
 node_t* parse_block();
-node_t* parse_proc();
+
 node_t* parse_instruction();
+
+node_t* parse_proc();
+node_t* parse_proc_args();
 
 const char* parse_getnodetypename(nodetype_t type);
 
@@ -56,5 +62,6 @@ bool parse_canmovenext();
 
 // other helper funcs
 node_t* parse_createnode(nodetype_t type);
+void parse_consumewhitespace(bool look_ahead);
 
 #endif

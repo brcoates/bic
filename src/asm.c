@@ -35,7 +35,11 @@ void asm_node(node_t* node) {
 			break;
 
 		case NT_INSTRUCTION:
-			asm_walkinstruction(node);
+			asm_walk_instruction(node);
+			break;
+
+		case NT_PROC:
+			asm_walk_proc(node);
 			break;
 
 		default:
@@ -44,7 +48,33 @@ void asm_node(node_t* node) {
 	}
 }
 
-void asm_walkinstruction(node_t* node) {
+void asm_walk_proc(node_t* node) {
+	// first of all, let's setup our proc object... in order to do this, we first need to derive the number of args
+	// this procedure will take. to do this, we will need to do some prelimary scanning work... once we have this we
+	// can init the proc object and take it from there.
+	proc_t* proc = asm_proc_create(asm_proc_getnumargs(node));
+}
+
+int asm_proc_getnumargs(node_t* node) {
+	if (node->type == NT_PROC) return asm_proc_getnumargs(node->body);
+	if (node->type == NT_PROC_ARGS_LIST) {
+		// great, now we're here, each child of body, then ->next will be an arg.
+		int num_args = 0;
+		node_t* next = NULL;
+		do {
+			if (next != NULL && next->type == NT_PROC_ARG) num_args = num_args + 1;
+
+			if (next == NULL) next = node->body;
+			else next = next->next;
+		} while (next != NULL);
+		return num_args;
+	} else {
+		assert(node->next != NULL);
+		return asm_proc_getnumargs(node->next);
+	}
+}
+
+void asm_walk_instruction(node_t* node) {
 	opcode_t opcode = opcode_getopcodetype(node->token->str);
 	if (opcode == OP_UNKNOWN) {
 		fprintf(stderr, "Unsupported opcode (%d) %s\n", opcode, node->token->str);
@@ -111,11 +141,18 @@ void asm_ins_mov(node_t* node) {
 	operand_t* op2 = operands->items[1];
 
 	char code[200];
-	sprintf(code, "MOV %s, %s\n", op1->token->str, op2->token->str);
+	sprintf(code, "mov %s, %s\n", op1->token->str, op2->token->str);
 	asm_appendasm(code);
 }
 
-symbol_t* asm_lookupsymbol(char* name) {
+symbol_t* asm_symbol_create(char* name) {
+	symbol_t* symbol = calloc(1, sizeof(symbol_t));
+	symbol->name = name;
+
+	return symbol;
+}
+
+symbol_t* asm_symbol_lookup(char* name) {
 	for (int i = 0; i < asm_state->symbols->count; i++) {
 		symbol_t* sym = asm_state->symbols->items[i];
 		if (strcmp(sym->name, name) == 0) return sym;
@@ -136,6 +173,27 @@ reg_t* asm_regalloc() {
 	return NULL;
 }
 
+void asm_stackframe_enter(stackframe_t* frame) {
+	asm_appendasm("push rbp\nmov rsp, rbp\n");
+
+	char str[100];
+	sprintf(str, "sub rsp, %d\n", frame->num_args);
+	asm_appendasm(str);
+}
+
+proc_t* asm_proc_create(int num_args) {
+	proc_t* proc = calloc(1, sizeof(proc_t));
+	proc->frame = asm_stackframe_create();
+
+	proc->frame->num_args = num_args;
+	
+	return proc;
+}
+
+void asm_stackframe_exit(stackframe_t* frame) {
+	asm_appendasm("mov rsp, rbp\npop rbp\n");
+}
+
 void asm_appendasm(char* code) {
 	asm_state->output = s_append(asm_state->output, code);
 }
@@ -149,4 +207,9 @@ void asm_initstate() {
 	asm_state->output = NULL;
 	asm_state->symbols = list_create();
 	asm_state->registers = reg_getall();
+}
+
+stackframe_t* asm_stackframe_create() {
+	stackframe_t* frame = calloc(1, sizeof(stackframe_t));
+	return frame;
 }

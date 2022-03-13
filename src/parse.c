@@ -97,7 +97,7 @@ node_t* parse_instruction() {
 
 	// once we have our command, we will be finished with the line
 	if (parse_current()->type != TT_EOL) {
-		log_unexpected("<EOL>", parse_peeknext()->str);
+		log_unexpected("<EOL>", parse_current()->str);
 		exit(1);
 	}
 
@@ -132,7 +132,55 @@ node_t* parse_instruction() {
 }
 
 node_t* parse_proc() {
-	return NULL;
+	token_t* proc_kw_tok = parse_current();
+	if (proc_kw_tok->type != TT_KEYWORD_PROC) {
+		return NULL;
+	}
+
+	node_t* proc = parse_createnode(NT_PROC);
+
+	token_t* proc_name = parse_next();
+	if (proc_name->type != TT_IDENT) {
+		log_unexpected("identifier", proc_name->str);
+		exit(1);
+	}
+	proc->token = proc_name;
+
+	if (parse_next()->type != TT_COLON) {
+		log_unexpected(":", parse_current()->str);
+		exit(1);
+	}
+	
+	parse_consumewhitespace(true);
+
+	// now let's go ahead and parse the args list...
+	proc->body = parse_proc_args();
+
+	if (parse_next()->type != TT_KEYWORD_BEGINPROC) {
+		log_unexpected("begin", parse_current()->str);
+		exit(1);
+	}
+	parse_next();
+	if (parse_current()->type == TT_EOL) parse_next();
+
+	// parse body of proc
+	proc->body->next = parse_block();
+
+	parse_consumewhitespace(true);
+	if (parse_next()->type != TT_KEYWORD_ENDPROC) {
+		log_unexpected("endproc", parse_current()->str);
+		exit(1);
+	}
+
+	return proc;
+}
+
+node_t* parse_proc_args() {
+	node_t* args_list_node = parse_createnode(NT_PROC_ARGS_LIST);
+
+	// each arg will be a TT_KEYWORD_PRIMTYPE, TT_IDENT & TT_SEMICOLON
+
+	return args_list_node;
 }
 
 const char* parse_getnodetypename(nodetype_t type) {
@@ -148,6 +196,9 @@ const char* parse_getnodetypename(nodetype_t type) {
 		case NT_OPERAND: return "NT_OPERAND";
 		case NT_LABEL: return "NT_LABEL";
 		case NT_OPERAND_LIST: return "NT_OPERAND_LIST";
+		case NT_LOCALVARDECL: return "NT_LOCALVARDECL";
+		case NT_PROC_ARGS_LIST: return "NT_PROC_ARGS_LIST";
+		case NT_PROC_ARG: return "NT_PROC_ARG";
 		default: return NULL;
 	}
 }
@@ -180,4 +231,16 @@ node_t* parse_createnode(nodetype_t type) {
 	node->type = type;
 
 	return node;
+}
+
+void parse_consumewhitespace(bool look_ahead) {
+	while (
+		parse_canmovenext() && 
+		(
+			(look_ahead && parse_peeknext()->type == TT_EOL) ||
+			(!look_ahead && parse_current()->type == TT_EOL)
+		)
+	) {
+		parse_next();
+	}
 }

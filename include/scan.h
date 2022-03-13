@@ -22,7 +22,8 @@ typedef enum toktype {
     TT_KEYWORD_ENDPROC,
     TT_KEYWORD_IF,
     TT_KEYWORD_ELSE,
-    TT_KEYWORD_ENDIF
+    TT_KEYWORD_ENDIF,
+	TT_KEYWORD_PRIMTYPE
 } toktype_t;
 
 typedef struct token {

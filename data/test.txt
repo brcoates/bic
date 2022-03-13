@@ -1,1 +1,6 @@
-mov rax, rbx
+proc test_proc:
+	int x;
+	int y;
+begin
+	mov rax, 1
+endproc

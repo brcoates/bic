@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
 
 	printf("Parsing...\n");
 	parse_t* parse_root = parse(scan);
-	print_node(parse_root->node_head, "", 0);
+	print_node(parse_root->node_head, "", 1);
 
 	char* asm_output = asm_codegen(parse_root);
 	printf("\nasm:\n%s", asm_output);
@@ -55,7 +55,7 @@ void print_node(node_t* root, char* prefix, int n) {
 	// and do the body if we have one
 	if (root->body != NULL) {
 		printf("%s->\n", prefix);
-		print_node(root->body, new_prefix, 0);
+		print_node(root->body, new_prefix, 1);
 	}
 	if (root->next != NULL) print_node(root->next, prefix, n + 1);
 

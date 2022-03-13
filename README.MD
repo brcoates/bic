@@ -12,12 +12,11 @@ Includes support for GP-x64 registers only.
 
 ### Syntax
 ```
-$123	- Numerical values prefixed with $
-$xFF	- Hexidecimal values prefixed with $x
-rax	- Registers prefixed with %
-\*rax		- Dereferencing pointer values prefixed with \* (i.e. deref rax)
+123		- Numerical values prefixed with $
+\*rax	- Dereferencing pointer values prefixed with \* (i.e. deref rax)
 lbl		- Label. No special syntax
 \# rem	- Comments prefixed with \#
+{typ} x - Local variable (i.e. int result) declaration
 ```
 
 ### Instruction set
@@ -38,9 +37,15 @@ JMP {label}				- Branch to {label}
 #### Procedures
 ```
 proc {proc\_name}:
-	{arg1}, {arg2}
+	int {arg1}, int {arg2}
 begin
-	add rax, ecx
+	int result
+
+	mov result, 1
+	add result, 2
+
+	mov rax, result
+
 	return rax;
 endproc
 ```
