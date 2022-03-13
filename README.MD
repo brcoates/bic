@@ -21,48 +21,7 @@ To test, run:
 ## Architecture
 
 ### Registers
-Includes support for GP-x64 registers only.
+TODO
 
 ### Syntax
-```
-123		- Numerical values prefixed with $
-\*rax	- Dereferencing pointer values prefixed with \* (i.e. deref rax)
-lbl		- Label. No special syntax
-\# rem	- Comments prefixed with \#
-{typ} x - Local variable (i.e. int result) declaration
-```
-
-### Instruction set
-```
-ADD {reg64a}, {reg64b} 	- {reg64a} + {reg64b}
-SUB {reg64a}, {reg64b} 	- {reg64a} - {reg64b}
-MUL {reg64a}, {reg64b} 	- {reg64a} * {reg64b}
-DIV {reg64a}, {reg64b} 	- {reg64a} / {reg64b}
-
-MOV	{reg64a}, {reg64b}	- {reg64a} := {reg64b}
-
-CALL {label}			- Branch to {label}, return to address
-JMP {label}				- Branch to {label}
-```
-
-### Extensions/Abstractions
-
-#### Procedures
-```
-proc {proc\_name}:
-	int {arg1}, int {arg2}
-begin
-	int result
-
-	mov result, 1
-	add result, 2
-
-	mov rax, result
-
-	return rax;
-endproc
-```
-
-#### If statements
-if ax < bx:
-endif
+TODO
