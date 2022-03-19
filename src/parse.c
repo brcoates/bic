@@ -177,8 +177,41 @@ node_t* parse_proc() {
 
 node_t* parse_proc_args() {
 	node_t* args_list_node = parse_createnode(NT_PROC_ARGS_LIST);
+	node_t* curr = NULL;
 
 	// each arg will be a TT_KEYWORD_PRIMTYPE, TT_IDENT & TT_SEMICOLON
+	while (parse_peeknext()->type == TT_KEYWORD_PRIMTYPE) {
+		token_t* type_spec = parse_next();
+		
+		token_t* ident = parse_next();
+		if (ident->type != TT_IDENT) {
+			log_unexpected("identifier", parse_current()->str);
+			exit(1);
+		}
+
+		// great, now we have the type and identifier, let's go ahead and make sure we end
+		// with a semicolon
+		if (parse_next()->type != TT_SEMICOLON) {
+			log_unexpected(";", parse_current()->str);
+			exit(1);
+		}
+
+		// now we know everything is all good, let's create our node and just add it!
+		node_t* arg_node = parse_createnode(NT_PROC_ARG);
+		arg_node->token = ident;
+		arg_node->body = parse_createnode(NT_PROC_ARG_DEF);
+		arg_node->body->token = type_spec;
+
+		if (curr == NULL) {
+			args_list_node->body = arg_node;
+			curr = arg_node;
+		} else {
+			curr->next = arg_node;
+			curr = arg_node;
+		}
+
+		parse_consumewhitespace(true);
+	}
 
 	return args_list_node;
 }
@@ -199,6 +232,7 @@ const char* parse_getnodetypename(nodetype_t type) {
 		case NT_LOCALVARDECL: return "NT_LOCALVARDECL";
 		case NT_PROC_ARGS_LIST: return "NT_PROC_ARGS_LIST";
 		case NT_PROC_ARG: return "NT_PROC_ARG";
+		case NT_PROC_ARG_DEF: return "NT_PROC_ARG_DEF";
 		default: return NULL;
 	}
 }

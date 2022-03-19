@@ -19,7 +19,8 @@ typedef enum nodetype {
 	NT_OPERAND_LIST,
 	NT_LOCALVARDECL,
 	NT_PROC_ARGS_LIST,
-	NT_PROC_ARG
+	NT_PROC_ARG,
+	NT_PROC_ARG_DEF
 } nodetype_t;
 
 struct node {

@@ -2,5 +2,5 @@ proc test_proc:
 	int x;
 	int y;
 begin
-	mov rax, 1
+	mov rax, $1
 endproc
