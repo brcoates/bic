@@ -27,6 +27,10 @@ typedef struct {
 } operand_t;
 
 operandtype_t operand_getregtype(reg_t* reg);
+operandtype_t operand_getnumtype(char* operand_str);
+
 operand_t* operand_create(operandtype_t type);
+
+char* operand_getnumstr(char* operand_str);
 
 #endif

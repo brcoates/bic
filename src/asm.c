@@ -8,6 +8,7 @@
 #include <include/scan.h>
 #include <include/parse.h>
 #include <include/opcode.h>
+#include <include/primitive.h>
 
 #include <include/s_util.h>
 
@@ -20,18 +21,18 @@ char* asm_codegen(parse_t* parse) {
 	// basically, we need to walk each node object.
 	node_t* curr = parse->node_head->body;
 	do {
-		asm_node(curr);
+		asm_walk_node(curr);
 		curr = curr->next;
 	} while (curr != NULL);
 
 	return asm_state->output;
 }
 
-void asm_node(node_t* node) {
+void asm_walk_node(node_t* node) {
 	switch (node->type) {
 		case NT_BODY: 
 			assert(node->body != NULL);
-			asm_node(node->body);
+			asm_walk_node(node->body);
 			break;
 
 		case NT_INSTRUCTION:
@@ -49,10 +50,62 @@ void asm_node(node_t* node) {
 }
 
 void asm_walk_proc(node_t* node) {
-	// first of all, let's setup our proc object... in order to do this, we first need to derive the number of args
+	// first thing's first, lets go ahead and add this symbol
+	symbol_t* proc_symbol = asm_symbol_add(node->token->str, SF_PROC);
+
+	// now we've got this, we need to add symbols for the args
+	node_t* curr = node->body;
+	node_t* proc_args = NULL;
+	while (curr != NULL && proc_args == NULL) {
+		if (curr->type == NT_PROC_ARGS_LIST) proc_args = curr;
+		curr = curr->next;
+	}
+	if (proc_args != NULL) {
+		node_t* arg = proc_args->body;
+		while (arg != NULL) {
+			assert(arg->type == NT_PROC_ARG);
+			
+			// now let's grab the type of the parameter, and set the flags accordingly.
+			enum symbolflags arg_flags = SF_PROC_ARG;
+
+			// because these will be primitives, we can use the existing infrastructure for this.
+			primitive_t primtype = prim_gettype(arg->body->token->str);
+			switch (primtype) {
+				case PRIM_INT: arg_flags |= SF_INT; break;
+				case PRIM_FLT: arg_flags |= SF_FLT; break;
+				case PRIM_STR: arg_flags |= SF_STR; break;
+				default: 
+					log_unexpected("primitive type", arg->token->str);
+					exit(1);
+					break;
+			}
+
+			asm_symbol_add(arg->token->str, arg_flags);
+
+			arg = arg->next;
+		}
+	}
+
+	// before we start emitting the asm, we need to actually spit out the label
+	asm_label(proc_symbol);
+
+	// let's setup our proc object... in order to do this, we first need to derive the number of args
 	// this procedure will take. to do this, we will need to do some prelimary scanning work... once we have this we
 	// can init the proc object and take it from there.
-	proc_t* proc = asm_proc_create(asm_proc_getnumargs(node));
+	stackframe_t* frame = asm_stackframe_create(asm_proc_getnumargs(node));
+	asm_stackframe_enter(frame);
+	
+	// now we need to grab the body and walk this one, which should be the second body item (i.e. ->body->next)
+	// but will loop like this just to be sure.
+	node_t* proc_body = NULL;
+	curr = node->body;
+	while (curr != NULL && proc_body == NULL) {
+		if (curr->type == NT_BODY) proc_body = curr;
+		curr = curr->next;
+	}
+	if (proc_body != NULL) asm_walk_node(proc_body);
+
+	asm_stackframe_exit(frame);
 }
 
 int asm_proc_getnumargs(node_t* node) {
@@ -61,12 +114,13 @@ int asm_proc_getnumargs(node_t* node) {
 		// great, now we're here, each child of body, then ->next will be an arg.
 		int num_args = 0;
 		node_t* next = NULL;
+		
 		do {
 			if (next != NULL && next->type == NT_PROC_ARG) num_args = num_args + 1;
-
 			if (next == NULL) next = node->body;
 			else next = next->next;
 		} while (next != NULL);
+
 		return num_args;
 	} else {
 		assert(node->next != NULL);
@@ -113,8 +167,22 @@ list_t* asm_getoperands(node_t* operands_node) {
 				break;
 			}
 
+			case TT_NUM: {
+				operand_t* operand_num = operand_create(operand_getnumtype(curr->token->str));
+
+				// we will have to create a new token, that matches with a different string.
+				operand_num->token = token_create(
+					operand_getnumstr(curr->token->str), 
+					curr->token->line_num,
+					curr->token->type
+				);
+
+				list_additem(operands, operand_num);
+				break;
+			}
+
 			default:
-				fprintf(stderr, "Unsupported opcode, %s\n", curr->token->str);
+				fprintf(stderr, "Unsupported operand, %s\n", curr->token->str);
 				exit(1);
 				break;
 		}
@@ -145,9 +213,10 @@ void asm_ins_mov(node_t* node) {
 	asm_appendasm(code);
 }
 
-symbol_t* asm_symbol_create(char* name) {
+symbol_t* asm_symbol_add(char* name, enum symbolflags flags) {
 	symbol_t* symbol = calloc(1, sizeof(symbol_t));
 	symbol->name = name;
+	symbol->flags = flags;
 
 	return symbol;
 }
@@ -160,7 +229,7 @@ symbol_t* asm_symbol_lookup(char* name) {
 	return NULL;
 }
 
-reg_t* asm_regalloc() {
+/*reg_t* asm_regalloc() {
 	for (int i = 0; i < asm_state->registers->count; i++) {
 		bool is_inuse = false;
 		for (int j = 0; j < asm_state->symbols->count && !is_inuse; j++) {
@@ -171,27 +240,30 @@ reg_t* asm_regalloc() {
 		if (!is_inuse) return asm_state->registers->items[i];
 	}
 	return NULL;
+}*/
+
+stackframe_t* asm_stackframe_create(int num_args) {
+	stackframe_t* frame = calloc(1, sizeof(stackframe_t));
+	frame->size = num_args * 64ul;
+	return frame;
 }
 
 void asm_stackframe_enter(stackframe_t* frame) {
 	asm_appendasm("push rbp\nmov rsp, rbp\n");
 
 	char str[100];
-	sprintf(str, "sub rsp, %d\n", frame->num_args);
+	sprintf(str, "sub rsp, %lu\n", frame->size);
 	asm_appendasm(str);
-}
-
-proc_t* asm_proc_create(int num_args) {
-	proc_t* proc = calloc(1, sizeof(proc_t));
-	proc->frame = asm_stackframe_create();
-
-	proc->frame->num_args = num_args;
-	
-	return proc;
 }
 
 void asm_stackframe_exit(stackframe_t* frame) {
 	asm_appendasm("mov rsp, rbp\npop rbp\n");
+}
+
+void asm_label(symbol_t* sym_label) {
+	asm_appendasm("\t");
+	asm_appendasm(sym_label->name);
+	asm_appendasm(":\n");
 }
 
 void asm_appendasm(char* code) {
@@ -209,7 +281,10 @@ void asm_initstate() {
 	asm_state->registers = reg_getall();
 }
 
-stackframe_t* asm_stackframe_create() {
-	stackframe_t* frame = calloc(1, sizeof(stackframe_t));
-	return frame;
+scope_t* asm_scope_create(stackframe_t* frame, bool is_global) {
+	scope_t* scope = calloc(1, sizeof(scope_t));
+	scope->frame = frame;
+	scope->is_global = is_global;
+
+	return scope;
 }

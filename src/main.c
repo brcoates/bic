@@ -2,14 +2,27 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <assert.h>
 
 #include <include/scan.h>
 #include <include/parse.h>
 #include <include/asm.h>
 
+static struct options {
+	struct debug_options {
+		bool print_scans;
+		bool print_parse;
+		bool print_asm;
+	} * debug_options;
+} * options;
+
 void print_node(node_t* root, char* prefix, int n, bool in_body);
+void options_setup(int argc, char** argv);
+void options_dispose();
 
 int main(int argc, char** argv) {
+	options_setup(argc, argv);
+
 	FILE* fp = fopen("/Users/ben/dev/bic/data/test.txt", "r");
 	if (fp == NULL) {
 		fprintf(stderr, "Error opening file.\n");
@@ -17,19 +30,26 @@ int main(int argc, char** argv) {
 	}
 
 	scan_t* scan = scan_file(fp);
-
-	for (int i = 0; i < scan->tokens->count; i++) {
-		token_t* token = scan->tokens->items[i];
-		printf("%02d: %s (%s)\n", token->line_num, token->str, token_gettypename(token->type));
+	if (options->debug_options->print_scans) {
+		for (int i = 0; i < scan->tokens->count; i++) {
+			token_t* token = scan->tokens->items[i];
+			printf("%02d: %s (%s)\n", token->line_num, token->str, token_gettypename(token->type));
+		}
+		printf("\n");
 	}
-	printf("\n");
 
-	printf("Parsing...\n");
 	parse_t* parse_root = parse(scan);
-	print_node(parse_root->node_head, "", 1, false);
+	if (options->debug_options->print_parse) {
+		print_node(parse_root->node_head, "", 1, false);
+		printf("\n");
+	}
 
 	char* asm_output = asm_codegen(parse_root);
-	printf("\nasm:\n%s", asm_output);
+	if (options->debug_options->print_asm) {
+		printf("%s", asm_output);
+	}
+
+	options_dispose();
 
 	return 0;
 }
@@ -68,4 +88,22 @@ void print_node(node_t* root, char* prefix, int n, bool in_body) {
 	if (root->next != NULL) print_node(root->next, prefix, n + 1, false);
 
 	free(new_prefix);
+}
+
+void options_setup(int argc, char** argv) {
+	options = calloc(1, sizeof(struct options));
+	options->debug_options = calloc(1, sizeof(struct debug_options));
+
+	// TODO: parse command-line args
+	options->debug_options->print_scans = false;
+	options->debug_options->print_parse = true;
+	options->debug_options->print_asm = true;
+}
+
+void options_dispose() {
+	assert(options != NULL);
+	assert(options->debug_options != NULL);
+
+	free(options->debug_options);
+	free(options);
 }
