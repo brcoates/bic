@@ -38,16 +38,13 @@ node_t* parse_block() {
 	bool is_first = true;
 
 	do {
-		printf("0\n");
 		node_t* curr_node = NULL;
 
-		printf("proc here\n");
 		node_t* procs = parse_proc();
 		if (procs != NULL) {
 			curr_node = procs;
 		}
 
-		printf("ins here\n");
 		node_t* instructions = parse_instruction();
 		if (instructions != NULL) {
 			if (curr_node != NULL) {
@@ -56,8 +53,7 @@ node_t* parse_block() {
 				curr_node = instructions;
 			}
 		}
-		printf("4\n");
-
+		
 		// this will allow us to continually chain nodes
 		if (is_first) {
 			next_node->body = curr_node;
@@ -67,7 +63,6 @@ node_t* parse_block() {
 		next_node = curr_node;
 
 		is_first = false;
-		printf("5\n");
 	} while (next_node != NULL && parse_canmovenext());
 
 	return root;
@@ -78,7 +73,6 @@ node_t* parse_instruction() {
 	token_t* opcode = parse_current();
 	if (!opcode_isopcode(opcode->str)) {
 		if (opcode->line_num > 4) {
-			printf("NOT AN OPERAND: %s\n", opcode->str);
 		}
 		return NULL;
 	}
@@ -87,11 +81,9 @@ node_t* parse_instruction() {
 	bool is_first = true;
 	do {
 		if (is_first || parse_current()->type == TT_COMMA) {
-			printf("1\n");
 			parse_next();
 		}
 
-		printf("2\n");
 		// next up, is our first instruction
 		token_t* operand = parse_current();
 		if (operand->type != TT_IDENT && operand->type != TT_REG && operand->type != TT_NUM) {
@@ -104,7 +96,6 @@ node_t* parse_instruction() {
 
 		is_first = false;
 	} while (parse_canmovenext() && parse_next()->type == TT_COMMA);
-	printf("3\n");
 
 	node_t* ins_node = parse_createnode(NT_INSTRUCTION);
 	ins_node->token = opcode;
@@ -257,7 +248,6 @@ token_t* parse_prev() {
 }
 
 bool parse_canmovenext() {
-	printf("canmove: %d\n", parse_state->scan_idx + 1 < parse_state->scan->tokens->count);
 	return parse_state->scan_idx + 1 < parse_state->scan->tokens->count;
 }
 
