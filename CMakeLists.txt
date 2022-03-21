@@ -4,6 +4,7 @@ project(bic)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_EXPORT_COMPILE_COMMANDS "ON")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY bin)
+set(CMAKE_BUILD_TYPE Debug)
 
 include_directories(".")
 

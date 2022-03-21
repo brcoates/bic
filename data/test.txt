@@ -1,6 +1,13 @@
-proc test_proc:
+proc main:
 	int x;
 	int y;
 begin
+
+	proc inner:
+	begin
+		mov rax, $8
+	endproc
+
+	mov rdx, $55
 	mov rax, $1
 endproc

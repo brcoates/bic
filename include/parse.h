@@ -63,6 +63,5 @@ bool parse_canmovenext();
 
 // other helper funcs
 node_t* parse_createnode(nodetype_t type);
-void parse_consumewhitespace(bool look_ahead);
 
 #endif

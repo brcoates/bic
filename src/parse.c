@@ -38,13 +38,16 @@ node_t* parse_block() {
 	bool is_first = true;
 
 	do {
+		printf("0\n");
 		node_t* curr_node = NULL;
 
+		printf("proc here\n");
 		node_t* procs = parse_proc();
 		if (procs != NULL) {
 			curr_node = procs;
 		}
 
+		printf("ins here\n");
 		node_t* instructions = parse_instruction();
 		if (instructions != NULL) {
 			if (curr_node != NULL) {
@@ -53,6 +56,7 @@ node_t* parse_block() {
 				curr_node = instructions;
 			}
 		}
+		printf("4\n");
 
 		// this will allow us to continually chain nodes
 		if (is_first) {
@@ -63,6 +67,7 @@ node_t* parse_block() {
 		next_node = curr_node;
 
 		is_first = false;
+		printf("5\n");
 	} while (next_node != NULL && parse_canmovenext());
 
 	return root;
@@ -72,6 +77,9 @@ node_t* parse_instruction() {
 	// first of all, let's check to see if the next node is in fact an opcode
 	token_t* opcode = parse_current();
 	if (!opcode_isopcode(opcode->str)) {
+		if (opcode->line_num > 4) {
+			printf("NOT AN OPERAND: %s\n", opcode->str);
+		}
 		return NULL;
 	}
 
@@ -79,13 +87,15 @@ node_t* parse_instruction() {
 	bool is_first = true;
 	do {
 		if (is_first || parse_current()->type == TT_COMMA) {
+			printf("1\n");
 			parse_next();
 		}
 
+		printf("2\n");
 		// next up, is our first instruction
 		token_t* operand = parse_current();
 		if (operand->type != TT_IDENT && operand->type != TT_REG && operand->type != TT_NUM) {
-			log_unexpected("operand", (char*) token_gettypename(operand->type));
+			log_unexpected("operand", (char*) token_gettypename(operand->type), operand->line_num);
 			exit(1);
 		}
 
@@ -94,12 +104,7 @@ node_t* parse_instruction() {
 
 		is_first = false;
 	} while (parse_canmovenext() && parse_next()->type == TT_COMMA);
-
-	// once we have our command, we will be finished with the line
-	if (parse_current()->type != TT_EOL) {
-		log_unexpected("<EOL>", parse_current()->str);
-		exit(1);
-	}
+	printf("3\n");
 
 	node_t* ins_node = parse_createnode(NT_INSTRUCTION);
 	ins_node->token = opcode;
@@ -141,34 +146,31 @@ node_t* parse_proc() {
 
 	token_t* proc_name = parse_next();
 	if (proc_name->type != TT_IDENT) {
-		log_unexpected("identifier", proc_name->str);
+		log_unexpected("identifier", proc_name->str, proc_name->line_num);
 		exit(1);
 	}
 	proc->token = proc_name;
 
 	if (parse_next()->type != TT_COLON) {
-		log_unexpected(":", parse_current()->str);
+		log_unexpected(":", parse_current()->str, parse_current()->line_num);
 		exit(1);
 	}
-	
-	parse_consumewhitespace(true);
 
 	// now let's go ahead and parse the args list...
 	proc->body = parse_proc_args();
 
 	if (parse_next()->type != TT_KEYWORD_BEGINPROC) {
-		log_unexpected("begin", parse_current()->str);
+		log_unexpected("begin", parse_current()->str, parse_current()->line_num);
 		exit(1);
 	}
 	parse_next();
-	if (parse_current()->type == TT_EOL) parse_next();
 
 	// parse body of proc
 	proc->body->next = parse_block();
 
-	parse_consumewhitespace(true);
-	if (parse_next()->type != TT_KEYWORD_ENDPROC) {
-		log_unexpected("endproc", parse_current()->str);
+	if (parse_current()->type != TT_KEYWORD_ENDPROC) {
+		char buff[200];
+		log_unexpected("endproc", parse_current()->str, parse_current()->line_num);
 		exit(1);
 	}
 
@@ -185,14 +187,14 @@ node_t* parse_proc_args() {
 		
 		token_t* ident = parse_next();
 		if (ident->type != TT_IDENT) {
-			log_unexpected("identifier", parse_current()->str);
+			log_unexpected("identifier", parse_current()->str, parse_current()->line_num);
 			exit(1);
 		}
 
 		// great, now we have the type and identifier, let's go ahead and make sure we end
 		// with a semicolon
 		if (parse_next()->type != TT_SEMICOLON) {
-			log_unexpected(";", parse_current()->str);
+			log_unexpected(";", parse_current()->str, parse_current()->line_num);
 			exit(1);
 		}
 
@@ -209,8 +211,6 @@ node_t* parse_proc_args() {
 			curr->next = arg_node;
 			curr = arg_node;
 		}
-
-		parse_consumewhitespace(true);
 	}
 
 	return args_list_node;
@@ -257,6 +257,7 @@ token_t* parse_prev() {
 }
 
 bool parse_canmovenext() {
+	printf("canmove: %d\n", parse_state->scan_idx + 1 < parse_state->scan->tokens->count);
 	return parse_state->scan_idx + 1 < parse_state->scan->tokens->count;
 }
 
@@ -265,16 +266,4 @@ node_t* parse_createnode(nodetype_t type) {
 	node->type = type;
 
 	return node;
-}
-
-void parse_consumewhitespace(bool look_ahead) {
-	while (
-		parse_canmovenext() && 
-		(
-			(look_ahead && parse_peeknext()->type == TT_EOL) ||
-			(!look_ahead && parse_current()->type == TT_EOL)
-		)
-	) {
-		parse_next();
-	}
 }

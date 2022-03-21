@@ -6,10 +6,10 @@
 
 char* log_resolve_print_str(char* str);
 
-void log_unexpected(char* expected, char* actual) {
-    fprintf(
-		stderr,
-		"Unexpected token, expected %s, got %s\n",
+void log_unexpected(char* expected, char* actual, int line_num) {
+	log_fatal(
+		line_num, 
+		"unexpected token, expected %s, got %s\n",
 		log_resolve_print_str(expected),
 		log_resolve_print_str(actual)
 	);
@@ -19,7 +19,7 @@ void log_fatal(int line_num, char* fmt, ...) {
 	va_list args;
 	va_start(args, fmt);
 
-	printf("error line %d: ", line_num);
+	fprintf(stderr, "line %d: ", line_num);
 	vprintf(fmt, args);
 
 	va_end(args);

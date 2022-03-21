@@ -13,7 +13,6 @@ typedef enum toktype {
 	TT_COMMENT,
 	TT_NUM,
 	TT_STRING,
-	TT_EOL,
     TT_COMMA,
     TT_COLON,
     TT_SEMICOLON,
@@ -40,6 +39,7 @@ scan_t* scan_file(FILE* fp);
 
 bool scan_isdelim(char c);
 bool scan_iswhitespace(char c);
+bool scan_isstrwhitespace(char* str);
 
 token_t* token_create(char* str, int line_num, toktype_t type);
 

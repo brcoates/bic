@@ -21,3 +21,8 @@ bic
 .bic.dir/
 bin/
 x64
+
+.DS_Store
+.vscode/
+build/
+cmake-build-debug/

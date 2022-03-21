@@ -49,6 +49,7 @@ void asm_initstate();
 
 char* asm_codegen(parse_t* parse);
 
+void asm_walk(node_t* node);
 void asm_walk_node(node_t* node);
 void asm_walk_instruction(node_t* node);
 void asm_walk_proc(node_t* node);

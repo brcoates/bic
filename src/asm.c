@@ -18,21 +18,26 @@ char* asm_codegen(parse_t* parse) {
 	asm_initstate();
 	assert(asm_state != NULL);
 
+	node_t* curr = parse->node_head;//->body;
+	asm_walk(curr);
+
+	return asm_state->output;
+}
+
+void asm_walk(node_t* node) {
 	// basically, we need to walk each node object.
-	node_t* curr = parse->node_head->body;
+	node_t* curr = node;
 	do {
 		asm_walk_node(curr);
 		curr = curr->next;
 	} while (curr != NULL);
-
-	return asm_state->output;
 }
 
 void asm_walk_node(node_t* node) {
 	switch (node->type) {
 		case NT_BODY: 
 			assert(node->body != NULL);
-			asm_walk_node(node->body);
+			asm_walk(node->body);
 			break;
 
 		case NT_INSTRUCTION:
@@ -75,7 +80,7 @@ void asm_walk_proc(node_t* node) {
 				case PRIM_FLT: arg_flags |= SF_FLT; break;
 				case PRIM_STR: arg_flags |= SF_STR; break;
 				default: 
-					log_unexpected("primitive type", arg->token->str);
+					log_fatal(arg->token->line_num, "%s is not a valid primitive type\n", arg->token->str);
 					exit(1);
 					break;
 			}
@@ -103,7 +108,7 @@ void asm_walk_proc(node_t* node) {
 		if (curr->type == NT_BODY) proc_body = curr;
 		curr = curr->next;
 	}
-	if (proc_body != NULL) asm_walk_node(proc_body);
+	if (proc_body != NULL) asm_walk(proc_body);
 
 	asm_stackframe_exit(frame);
 }
@@ -251,9 +256,11 @@ stackframe_t* asm_stackframe_create(int num_args) {
 void asm_stackframe_enter(stackframe_t* frame) {
 	asm_appendasm("push rbp\nmov rsp, rbp\n");
 
-	char str[100];
-	sprintf(str, "sub rsp, %lu\n", frame->size);
-	asm_appendasm(str);
+	if (frame->size > 0) {
+		char str[100];
+		sprintf(str, "sub rsp, %lu\n", frame->size);
+		asm_appendasm(str);
+	}
 }
 
 void asm_stackframe_exit(stackframe_t* frame) {

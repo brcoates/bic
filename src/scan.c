@@ -33,7 +33,8 @@ scan_t* scan_file(FILE* fp) {
                 str[strlen(tok_str) + 1] = '\0';
             }
 
-            list_additem(tokens, token_create(str, line_num, token_gettype(str)));
+			if (!scan_isstrwhitespace(str))
+				list_additem(tokens, token_create(str, line_num, token_gettype(str)));
 
             tok_str[0] = '\0';
 
@@ -46,16 +47,6 @@ scan_t* scan_file(FILE* fp) {
         } else if (in_str || !scan_iswhitespace(c) && c != EOF) {
             char str[2] = {c, '\0'};
             strcat(tok_str, str);
-        }
-
-        // add our newline. this is required, otherwise would have to use 
-		// a delimiter like ';'... not rlly standard for assembly languages
-        if (c == '\n') {
-			line_num++;
-
-            char* str = calloc(2, sizeof(char));
-            str[0] = c;
-            list_additem(tokens, token_create(str, line_num, TT_EOL));
         }
 
         prev = c;
@@ -76,6 +67,13 @@ bool scan_isdelim(char c) {
 
 bool scan_iswhitespace(char c) {
     return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+}
+
+bool scan_isstrwhitespace(char* str) {
+	for (int i = 0; i < strlen(str); i++) {
+		if (!scan_iswhitespace(str[i])) return false;
+	}
+	return true;
 }
 
 token_t* token_create(char* str, int line_num, toktype_t type) {
@@ -101,7 +99,6 @@ toktype_t token_gettype(const char* token) {
     if (token[0] == ';') return TT_SEMICOLON;
     if (token[0] == ':') return TT_COLON;
     if (token[0] == ',') return TT_COMMA;
-    if (token[0] == '\n') return TT_EOL;
     if (tok_len > 1 && token[0] == '$') return TT_NUM;
     if (tok_len > 2 && token[1] == '/' && token[2] == '/') return TT_COMMENT;
     if (tok_len >= 2 && token[0] == '\"' && token[tok_len - 1] == '\"') return TT_STRING;
@@ -128,7 +125,6 @@ const char* token_gettypename(toktype_t type) {
         case TT_REG: return "TT_REG";
         case TT_NUM: return "TT_NUM";
         case TT_COMMENT: return "TT_COMMENT";
-        case TT_EOL: return "TT_EOL";
         case TT_COMMA: return "TT_COMMA";
         case TT_COLON: return "TT_COLON";
         case TT_SEMICOLON: return "TT_SEMICOLON";
