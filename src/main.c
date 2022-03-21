@@ -95,7 +95,7 @@ void options_setup(int argc, char** argv) {
 	options->debug_options = calloc(1, sizeof(struct debug_options));
 
 	// TODO: parse command-line args
-	options->debug_options->print_scans = true;
+	options->debug_options->print_scans = false;
 	options->debug_options->print_parse = true;
 	options->debug_options->print_asm = true;
 }
