@@ -47,15 +47,20 @@ typedef struct {
 void asm_initstate();
 //reg_t* asm_regalloc();
 
+// Entrypoint
 char* asm_codegen(parse_t* parse);
 
+// Walk functions
 void asm_walk(node_t* node);
 void asm_walk_node(node_t* node);
+void asm_walk_label(node_t* node);
 void asm_walk_instruction(node_t* node);
 void asm_walk_proc(node_t* node);
 
 list_t* asm_getoperands(node_t* operands_node);
+void asm_ins_scanoperands(node_t* node, char* opcode_name, list_t** operands, int max_args);
 void asm_ins_mov(node_t* node);
+void asm_ins_add(node_t* node);
 
 void asm_label(symbol_t* sym_label);
 void asm_appendasm(char* code);

@@ -42,11 +42,17 @@ typedef struct parse_state {
 	int scan_idx;
 } parse_state_t;
 
+typedef enum block_scope {
+	BS_GLOB,
+	BS_PROC
+} block_scope_t;
+
 void parse_setstate(scan_t* scan);
 parse_t* parse(scan_t* scan);
 
-node_t* parse_block();
+node_t* parse_block(block_scope_t scope);
 
+node_t* parse_label();
 node_t* parse_instruction();
 
 node_t* parse_proc();
@@ -63,5 +69,6 @@ bool parse_canmovenext();
 
 // other helper funcs
 node_t* parse_createnode(nodetype_t type);
+const char* parse_getscopename(block_scope_t scope);
 
 #endif

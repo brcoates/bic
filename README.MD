@@ -24,4 +24,7 @@ To test, run:
 TODO
 
 ### Syntax
-TODO
+
+Numerical Values: $xyz
+Labels: \_xyz
+

@@ -10,11 +10,14 @@
 #include <include/opcode.h>
 #include <include/primitive.h>
 
+#include <include/instruction.h>
+
 #include <include/s_util.h>
 
 static asm_state_t* asm_state = NULL;
 
 char* asm_codegen(parse_t* parse) {
+	ins_initstate();
 	asm_initstate();
 	assert(asm_state != NULL);
 
@@ -48,10 +51,20 @@ void asm_walk_node(node_t* node) {
 			asm_walk_proc(node);
 			break;
 
+		case NT_LABEL:
+			asm_walk_label(node);
+			break;
+
 		default:
 			fprintf(stderr, "Unsupported feature, %s\n", parse_getnodetypename(node->type));
 			exit(1);
 	}
+}
+
+void asm_walk_label(node_t* node) {
+	char buff[200];
+	sprintf(buff, "\t%s:\n", node->token->str);
+	asm_appendasm(buff);
 }
 
 void asm_walk_proc(node_t* node) {
@@ -146,6 +159,10 @@ void asm_walk_instruction(node_t* node) {
 			asm_ins_mov(node);
 			break;
 
+		case OP_ADD:
+			asm_ins_add(node);
+			break;
+
 		default:
 			fprintf(stderr, "Unsupported codegen for opcode %s\n", opcode_gettypename(opcode));
 			exit(1);
@@ -197,25 +214,40 @@ list_t* asm_getoperands(node_t* operands_node) {
 	return operands;
 }
 
-void asm_ins_mov(node_t* node) {
+void asm_ins_scanoperands(node_t* node, char* opcode_name, list_t** operands, int max_args) {
 	node_t* operands_node = node->body;
 	assert(operands_node->type == NT_OPERAND_LIST);
 
-	list_t* operands = asm_getoperands(operands_node);
-	if (operands->count != 2) {
-		log_fatal(node->token->line_num, "MOV operand requires 2 arguments\n");
+	*operands = asm_getoperands(operands_node);
+	if ((*operands)->count != max_args) {
+		log_fatal(node->token->line_num, "%s opcode candidate requires %d arguments\n", opcode_name, max_args);
 		exit(1);
 	}
+}
+
+void asm_ins_mov(node_t* node) {
+	list_t* operands;
+	asm_ins_scanoperands(node, "mov", &operands, 2);
 
 	// now we have the operands, let's go ahead and spit these back out
 	// ideally we would have some validation here, but let's leave that for
 	// another day.
+	assert(operands != NULL);
 	operand_t* op1 = operands->items[0];
 	operand_t* op2 = operands->items[1];
 
 	char code[200];
 	sprintf(code, "mov %s, %s\n", op1->token->str, op2->token->str);
 	asm_appendasm(code);
+}
+
+void asm_ins_add(node_t* node) {
+	list_t* operands;
+	asm_ins_scanoperands(node, "add", &operands, 2);
+
+	assert(operands != NULL);
+	operand_t* op1 = operands->items[0];
+	operand_t* op2 = operands->items[1];
 }
 
 symbol_t* asm_symbol_add(char* name, enum symbolflags flags) {
@@ -264,7 +296,7 @@ void asm_stackframe_enter(stackframe_t* frame) {
 }
 
 void asm_stackframe_exit(stackframe_t* frame) {
-	asm_appendasm("mov rsp, rbp\npop rbp\n");
+	asm_appendasm("mov rsp, rbp\npop rbp\nret\n");
 }
 
 void asm_label(symbol_t* sym_label) {

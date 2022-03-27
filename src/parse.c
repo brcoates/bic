@@ -24,14 +24,14 @@ parse_t* parse(scan_t* scan) {
 	parse_t* root = parse_state->parse_root;
 	
 	// the root of any program is a block, so let's parse that first, and go from there.
-	root->node_head = parse_block();
+	root->node_head = parse_block(BS_GLOB);
 
 	return root;
 }
 
-node_t* parse_block() {
+node_t* parse_block(block_scope_t scope) {
 	// basically a block consists of:
-	// instructions | procedures
+	// instructions | procedures | labels
 	
 	node_t* root = parse_createnode(NT_BODY);
 	node_t* next_node = root;
@@ -40,9 +40,11 @@ node_t* parse_block() {
 	do {
 		node_t* curr_node = NULL;
 
-		node_t* procs = parse_proc();
-		if (procs != NULL) {
-			curr_node = procs;
+		if (scope == BS_GLOB) {
+			node_t* procs = parse_proc();
+			if (procs != NULL) {
+				curr_node = procs;
+			}
 		}
 
 		node_t* instructions = parse_instruction();
@@ -51,6 +53,15 @@ node_t* parse_block() {
 				curr_node->next = instructions; 
 			} else {
 				curr_node = instructions;
+			}
+		}
+
+		node_t* label = parse_label();
+		if (label != NULL) {
+			if (curr_node != NULL) {
+				curr_node->next = label;
+			} else {
+				curr_node = label;
 			}
 		}
 		
@@ -66,6 +77,22 @@ node_t* parse_block() {
 	} while (next_node != NULL && parse_canmovenext());
 
 	return root;
+}
+
+node_t* parse_label() {
+	if (!parse_canmovenext()) return NULL;
+
+	token_t* label_ident = parse_current();
+	if (label_ident->type != TT_IDENT || parse_peeknext()->type != TT_COLON) return NULL;
+
+	parse_next();
+	parse_next();
+
+	// create label
+	node_t* label = parse_createnode(NT_LABEL);
+	label->token = label_ident;
+
+	return label;
 }
 
 node_t* parse_instruction() {
@@ -157,13 +184,15 @@ node_t* parse_proc() {
 	parse_next();
 
 	// parse body of proc
-	proc->body->next = parse_block();
+	proc->body->next = parse_block(BS_PROC);
 
 	if (parse_current()->type != TT_KEYWORD_ENDPROC) {
 		char buff[200];
 		log_unexpected("endproc", parse_current()->str, parse_current()->line_num);
 		exit(1);
 	}
+	if (parse_canmovenext())
+		parse_next();
 
 	return proc;
 }
@@ -256,4 +285,12 @@ node_t* parse_createnode(nodetype_t type) {
 	node->type = type;
 
 	return node;
+}
+
+const char* parse_getscopename(block_scope_t scope) {
+	switch (scope) {
+		case BS_GLOB: return "BS_GLOB";
+		case BS_PROC: return "BS_PROC";
+		default: return "BS_UNKNOWN";
+	}
 }
