@@ -8,5 +8,6 @@ typedef struct list {
 
 list_t* list_create();
 void list_additem(list_t* list, void* item);
+void list_free(list_t* list);
 
 #endif

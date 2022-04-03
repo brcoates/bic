@@ -7,5 +7,5 @@ echo "---------------------------------------------------------"
 ./build.sh
 
 if [ $? -eq 0 ]; then
-	./bin/bic
+	./bin/bic "./test/multiple_procs.txt"
 fi

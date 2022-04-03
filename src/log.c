@@ -20,7 +20,7 @@ void log_fatal(int line_num, char* fmt, ...) {
 	va_start(args, fmt);
 
 	fprintf(stderr, "line %d: ", line_num);
-	vprintf(fmt, args);
+	vfprintf(stderr, fmt, args);
 
 	va_end(args);
 }

@@ -20,7 +20,10 @@ typedef enum nodetype {
 	NT_LOCALVARDECL,
 	NT_PROC_ARGS_LIST,
 	NT_PROC_ARG,
-	NT_PROC_ARG_DEF
+	NT_PROC_ARG_DEF,
+	NT_CALL,
+	NT_CALL_ARGS_LIST,
+	NT_CALL_ARG,
 } nodetype_t;
 
 struct node {
@@ -54,6 +57,7 @@ node_t* parse_block(block_scope_t scope);
 
 node_t* parse_label();
 node_t* parse_instruction();
+node_t* parse_call();
 
 node_t* parse_proc();
 node_t* parse_proc_args();

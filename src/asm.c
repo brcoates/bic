@@ -9,7 +9,6 @@
 #include <include/parse.h>
 #include <include/opcode.h>
 #include <include/primitive.h>
-
 #include <include/instruction.h>
 
 #include <include/s_util.h>
@@ -17,11 +16,15 @@
 static asm_state_t* asm_state = NULL;
 
 char* asm_codegen(parse_t* parse) {
-	ins_initstate();
+	
+	opcode_t opcode = OP_ADD;
+	list_t* operands = list_create();
+
+	ins_initstate(false);
 	asm_initstate();
 	assert(asm_state != NULL);
 
-	node_t* curr = parse->node_head;//->body;
+	node_t* curr = parse->node_head;
 	asm_walk(curr);
 
 	return asm_state->output;
@@ -69,7 +72,7 @@ void asm_walk_label(node_t* node) {
 
 void asm_walk_proc(node_t* node) {
 	// first thing's first, lets go ahead and add this symbol
-	symbol_t* proc_symbol = asm_symbol_add(node->token->str, SF_PROC);
+	symbol_t* proc_symbol = asm_symbol_add(node->token->str, SF_PROC, 0);
 
 	// now we've got this, we need to add symbols for the args
 	node_t* curr = node->body;
@@ -80,6 +83,7 @@ void asm_walk_proc(node_t* node) {
 	}
 	if (proc_args != NULL) {
 		node_t* arg = proc_args->body;
+		int arg_idx = 0;
 		while (arg != NULL) {
 			assert(arg->type == NT_PROC_ARG);
 			
@@ -98,9 +102,11 @@ void asm_walk_proc(node_t* node) {
 					break;
 			}
 
-			asm_symbol_add(arg->token->str, arg_flags);
+			asm_symbol_add(arg->token->str, arg_flags, arg_idx);
 
 			arg = arg->next;
+
+			arg_idx++;
 		}
 	}
 
@@ -144,6 +150,9 @@ int asm_proc_getnumargs(node_t* node) {
 		assert(node->next != NULL);
 		return asm_proc_getnumargs(node->next);
 	}
+}
+
+void asm_walk_call(node_t* node) {
 }
 
 void asm_walk_instruction(node_t* node) {
@@ -203,6 +212,11 @@ list_t* asm_getoperands(node_t* operands_node) {
 				break;
 			}
 
+			case TT_IDENT: {
+				operand_t* operand_ident = operand_create(OT_m64);
+				break; // TODO: FILL THIS IN
+			}
+
 			default:
 				fprintf(stderr, "Unsupported operand, %s\n", curr->token->str);
 				exit(1);
@@ -237,7 +251,7 @@ void asm_ins_mov(node_t* node) {
 	operand_t* op2 = operands->items[1];
 
 	char code[200];
-	sprintf(code, "mov %s, %s\n", op1->token->str, op2->token->str);
+	sprintf(code, "mov %s, %s\n", asm_ins_resolveoperandasm(op1), asm_ins_resolveoperandasm(op2));
 	asm_appendasm(code);
 }
 
@@ -250,10 +264,16 @@ void asm_ins_add(node_t* node) {
 	operand_t* op2 = operands->items[1];
 }
 
-symbol_t* asm_symbol_add(char* name, enum symbolflags flags) {
+char* asm_ins_resolveoperandasm(operand_t* operand) {
+	// TODO: IMPLEMENT
+}
+
+symbol_t* asm_symbol_add(char* name, enum symbolflags flags, unsigned long offset) {
 	symbol_t* symbol = calloc(1, sizeof(symbol_t));
+	symbol->base = calloc(1, sizeof(union base));
 	symbol->name = name;
 	symbol->flags = flags;
+	symbol->offset = offset;
 
 	return symbol;
 }
@@ -281,7 +301,9 @@ symbol_t* asm_symbol_lookup(char* name) {
 
 stackframe_t* asm_stackframe_create(int num_args) {
 	stackframe_t* frame = calloc(1, sizeof(stackframe_t));
-	frame->size = num_args * 64ul;
+	if (num_args > 4) {
+		frame->size = (num_args - 4) * 64u;
+	}
 	return frame;
 }
 

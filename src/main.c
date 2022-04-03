@@ -14,16 +14,24 @@ static struct options {
 		bool print_parse;
 		bool print_asm;
 	} * debug_options;
+	char* input_filename;
 } * options;
 
 void print_node(node_t* root, char* prefix, int n, bool in_body);
+
 void options_setup(int argc, char** argv);
 void options_dispose();
+bool options_isoption(char* str);
+bool options_isswitch(char* str);
 
 int main(int argc, char** argv) {
 	options_setup(argc, argv);
 
-	FILE* fp = fopen("/Users/ben/dev/bic/data/test.txt", "r");
+	if (options->input_filename == NULL) {
+		fprintf(stderr, "No input file specified\n");
+		exit(1);
+	}
+	FILE* fp = fopen(options->input_filename, "r");
 	if (fp == NULL) {
 		fprintf(stderr, "Error opening file.\n");
 		exit(1);
@@ -94,10 +102,27 @@ void options_setup(int argc, char** argv) {
 	options = calloc(1, sizeof(struct options));
 	options->debug_options = calloc(1, sizeof(struct debug_options));
 
+	// set input filename
+	if (argc > 1 && !options_isoption(argv[argc - 1]) && !options_isswitch(argv[argc - 1])) {
+		options->input_filename = argv[argc - 1];
+	}
+
 	// TODO: parse command-line args
 	options->debug_options->print_scans = false;
 	options->debug_options->print_parse = true;
-	options->debug_options->print_asm = true;
+	options->debug_options->print_asm = false;
+}
+
+bool options_isoption(char* str) {
+	// TODO: check for actual options
+	assert(str != NULL);
+	return strlen(str) > 0 ? str[0] == '-' : false;
+}
+
+bool options_isswitch(char* str) {
+	// TODO: check for actual switches
+	assert(str != NULL);
+	return strlen(str) > 0 ? str[0] == '-' : false;
 }
 
 void options_dispose() {

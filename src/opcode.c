@@ -14,6 +14,8 @@ opcode_t opcode_getopcodetype(char* str) {
 	if (strcmp(str_lower, "mov") == 0) return OP_MOV;
 	if (strcmp(str_lower, "cmp") == 0) return OP_CMP;
 	if (strcmp(str_lower, "jmp") == 0) return OP_JMP;
+	if (strcmp(str_lower, "jmp") == 0) return OP_PUSH;
+	if (strcmp(str_lower, "jmp") == 0) return OP_POP;
 	return OP_UNKNOWN;
 }
 
@@ -26,6 +28,8 @@ const char* opcode_gettypename(opcode_t opcode) {
 		case OP_MOV: return "MOV";
 		case OP_CMP: return "CMP";
 		case OP_JMP: return "JMP";
+		case OP_PUSH: return "PUSH";
+		case OP_POP: return "POP";
 		default: return NULL;
 	}
 }

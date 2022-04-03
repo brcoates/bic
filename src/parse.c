@@ -31,7 +31,7 @@ parse_t* parse(scan_t* scan) {
 
 node_t* parse_block(block_scope_t scope) {
 	// basically a block consists of:
-	// instructions | procedures | labels
+	// instructions | procedures | labels | calls
 	
 	node_t* root = parse_createnode(NT_BODY);
 	node_t* next_node = root;
@@ -53,6 +53,15 @@ node_t* parse_block(block_scope_t scope) {
 				curr_node->next = instructions; 
 			} else {
 				curr_node = instructions;
+			}
+		}
+
+		node_t* call = parse_call();
+		if (call != NULL) {
+			if (curr_node != NULL) {
+				curr_node->next = call; 
+			} else {
+				curr_node = call;
 			}
 		}
 
@@ -93,6 +102,52 @@ node_t* parse_label() {
 	label->token = label_ident;
 
 	return label;
+}
+
+node_t* parse_call() {
+	if (!parse_canmovenext() || parse_current()->type != TT_KEYWORD_CALL) return NULL;
+
+	token_t* symbol = parse_next();
+
+	// ok great, now we have the details we can go ahead and grab the arguments/operands
+	list_t* arguments = list_create();
+	do {
+		token_t* arg_tok = parse_next();
+		if (arg_tok->type != TT_NUM && arg_tok->type != TT_REG && arg_tok->type != TT_IDENT) {
+			log_unexpected("number, register or identifier", arg_tok->str, arg_tok->line_num);
+			exit(1);
+		}
+		list_additem(arguments, arg_tok);
+	} while (parse_next()->type == TT_COMMA);
+
+	// great, now we've got all the args & the name, let's go ahead and construct our node and return
+	node_t* call_node = parse_createnode(NT_CALL);
+	call_node->token = symbol;
+
+	// now assign the arguments to the body...
+	if (arguments->count > 0) {
+		call_node->body = parse_createnode(NT_CALL_ARGS_LIST);
+		node_t* args_list_node = call_node->body;
+		
+		node_t* next = NULL;
+		for (int i = 0; i < arguments->count; i++) {
+			token_t* arg_tok = arguments->items[i];
+
+			node_t* arg_node = parse_createnode(NT_CALL_ARG);
+			arg_node->token = arg_tok;
+			
+			if (args_list_node->body == NULL) {
+				args_list_node->body = arg_node;
+				next = arg_node;
+			}
+			else {
+				next->next = arg_node;
+				next = next->next;
+			}
+		}
+	}
+	
+	return call_node;
 }
 
 node_t* parse_instruction() {
@@ -253,6 +308,9 @@ const char* parse_getnodetypename(nodetype_t type) {
 		case NT_PROC_ARGS_LIST: return "NT_PROC_ARGS_LIST";
 		case NT_PROC_ARG: return "NT_PROC_ARG";
 		case NT_PROC_ARG_DEF: return "NT_PROC_ARG_DEF";
+		case NT_CALL: return "NT_CALL";
+		case NT_CALL_ARG: return "NT_CALL_ARG";
+		case NT_CALL_ARGS_LIST: return "NT_CALL_ARGS_LIST";
 		default: return NULL;
 	}
 }

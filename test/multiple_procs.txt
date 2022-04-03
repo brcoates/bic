@@ -1,0 +1,16 @@
+proc sum:
+	int a;
+	int b;
+	int c;
+begin
+	mov rax, $0
+	add rax, a
+	add rax, b
+	add rax, c
+endproc
+
+proc main:
+begin
+	mov rax, $0
+	call sum $1, $5, $2
+endproc

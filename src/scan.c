@@ -49,6 +49,8 @@ scan_t* scan_file(FILE* fp) {
             strcat(tok_str, str);
         }
 
+		if (c == '\n') line_num++;
+
         prev = c;
     } while (c != EOF);
 
@@ -61,7 +63,7 @@ bool scan_isdelim(char c) {
     if (c >= 'a' && c <= 'z') return false;
     if (c >= 'A' && c <= 'Z') return false;
     if (c >= '0' && c <= '9') return false;
-    if (c == '_') return false;
+    if (c == '_' || c == '@') return false;
     return true;
 }
 
@@ -96,9 +98,9 @@ toktype_t token_gettype(const char* token) {
 	if (opcode_isopcode((char*) token)) return TT_OPCODE;
 	if (prim_isprimitive((char*) token)) return TT_KEYWORD_PRIMTYPE;
 
-    if (token[0] == ';') return TT_SEMICOLON;
-    if (token[0] == ':') return TT_COLON;
-    if (token[0] == ',') return TT_COMMA;
+    if (token[0] == ';' && tok_len == 1) return TT_SEMICOLON;
+    if (token[0] == ':' && tok_len == 1) return TT_COLON;
+    if (token[0] == ',' && tok_len == 1) return TT_COMMA;
     if (tok_len > 1 && token[0] == '$') return TT_NUM;
     if (tok_len > 2 && token[1] == '/' && token[2] == '/') return TT_COMMENT;
     if (tok_len >= 2 && token[0] == '\"' && token[tok_len - 1] == '\"') return TT_STRING;
@@ -115,6 +117,7 @@ toktype_t token_gettype(const char* token) {
     if (strcmp(lower_token, "proc") == 0) return TT_KEYWORD_PROC;
     if (strcmp(lower_token, "begin") == 0) return TT_KEYWORD_BEGINPROC;
     if (strcmp(lower_token, "endproc") == 0) return TT_KEYWORD_ENDPROC;
+	if (strcmp(lower_token, "call") == 0) return TT_KEYWORD_CALL;
 
     return TT_IDENT;
 }
@@ -136,6 +139,7 @@ const char* token_gettypename(toktype_t type) {
         case TT_KEYWORD_ENDIF: return "TT_KEYWORD_ENDIF";
 		case TT_OPCODE: return "TT_OPCODE";
 		case TT_KEYWORD_PRIMTYPE: return "TT_KEYWORD_PRIMTYPE";
+		case TT_KEYWORD_CALL: return "TT_KEYWORD_CALL";
 		case TT_UNKNOWN: return "TT_UNKNOWN";
         default: return "??";
     }

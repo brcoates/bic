@@ -13,6 +13,8 @@ typedef enum opcode {
 	OP_MOV,
 	OP_CMP,
 	OP_JMP,
+	OP_PUSH,
+	OP_POP,
 	OP_UNKNOWN
 } opcode_t;
 

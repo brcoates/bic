@@ -3,9 +3,13 @@
 
 #include <stdlib.h>
 
+#include <include/seg.h>
+#include <include/reg.h>
 #include <include/list.h>
 #include <include/parse.h>
-#include <include/reg.h>
+#include <include/operand.h>
+
+#define STACK_ALIGN 
 
 typedef struct {
 	size_t size;
@@ -22,20 +26,32 @@ typedef struct {
 } scope_t;
 scope_t* asm_scope_create(stackframe_t* frame, bool is_global);
 
-typedef struct {
+typedef struct symbol symbol_t;
+struct symbol {
 	char* name;
 	node_t* root_node;
 	enum symbolflags {
-		SF_PROC 	= (1 << 0),
-		SF_PROC_ARG	= (1 << 1),
-		SF_VAR 		= (1 << 2),
-		SF_INT 		= (1 << 3),
-		SF_FLT		= (1 << 4),
-		SF_STR 		= (1 << 5)
+		SF_UNKNOWN	= (1 << 0),
+		SF_PROC 	= (1 << 1),
+		SF_PROC_ARG	= (1 << 2),
+		SF_VAR 		= (1 << 3),
+		SF_INT 		= (1 << 4),
+		SF_FLT		= (1 << 5),
+		SF_STR 		= (1 << 6)
 	} flags;
-	long address;
-} symbol_t;
-symbol_t* asm_symbol_add(char* name, enum symbolflags flags);
+	segment_t* segment;
+	enum {
+		BT_UNKNOWN,
+		BT_REGISTER,
+		BT_SYMBOL
+	} base_type;
+	union base {
+		reg_t* reg;
+		symbol_t* symbol;
+	} * base;
+	unsigned long offset; // for proc args this will be the argument index
+};
+symbol_t* asm_symbol_add(char* name, enum symbolflags flags, unsigned long offset);
 symbol_t* asm_symbol_lookup(char* name);
 void asm_symbol_print_table();
 
@@ -56,9 +72,11 @@ void asm_walk_node(node_t* node);
 void asm_walk_label(node_t* node);
 void asm_walk_instruction(node_t* node);
 void asm_walk_proc(node_t* node);
+void asm_walk_call(node_t* node);
 
 list_t* asm_getoperands(node_t* operands_node);
 void asm_ins_scanoperands(node_t* node, char* opcode_name, list_t** operands, int max_args);
+char* asm_ins_resolveoperandasm(operand_t* operand);
 void asm_ins_mov(node_t* node);
 void asm_ins_add(node_t* node);
 
