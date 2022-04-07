@@ -1,8 +1,8 @@
 #ifndef OPERAND_H
 #define OPERAND_H
 
-#include <include/scan.h>
 #include <include/reg.h>
+#include <include/scan.h>
 
 /*
  * operand type structure:

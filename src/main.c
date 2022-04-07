@@ -7,6 +7,8 @@
 #include <include/scan.h>
 #include <include/parse.h>
 #include <include/asm.h>
+#include <include/log.h>
+#include <include/s_util.h>
 
 static struct options {
 	struct debug_options {
@@ -19,6 +21,7 @@ static struct options {
 
 void print_node(node_t* root, char* prefix, int n, bool in_body);
 
+void options_printhelp();
 void options_setup(int argc, char** argv);
 void options_dispose();
 bool options_isoption(char* str);
@@ -28,12 +31,12 @@ int main(int argc, char** argv) {
 	options_setup(argc, argv);
 
 	if (options->input_filename == NULL) {
-		fprintf(stderr, "No input file specified\n");
+		log_fatal("no input file specified\n");
 		exit(1);
 	}
 	FILE* fp = fopen(options->input_filename, "r");
 	if (fp == NULL) {
-		fprintf(stderr, "Error opening file.\n");
+		log_fatal("error opening file.\n");
 		exit(1);
 	}
 
@@ -107,10 +110,20 @@ void options_setup(int argc, char** argv) {
 		options->input_filename = argv[argc - 1];
 	}
 
-	// TODO: parse command-line args
 	options->debug_options->print_scans = false;
-	options->debug_options->print_parse = true;
-	options->debug_options->print_asm = false;
+	options->debug_options->print_parse = true; 
+	options->debug_options->print_asm = true;
+	if (argc > 1) {
+		for (int i = 1; i < argc; i++) {
+			char* arg = argv[i];
+			assert(arg != NULL);
+
+			if (s_eqi(arg, "--debug-scan")) options->debug_options->print_scans = true;
+			else if (s_eqi(arg, "--debug-parse")) options->debug_options->print_parse = true;
+			else if (s_eqi(arg, "--no-asm")) options->debug_options->print_asm = false;
+			else if (s_eqi(arg, "--help")) options_printhelp();
+		}
+	}
 }
 
 bool options_isoption(char* str) {
@@ -131,4 +144,15 @@ void options_dispose() {
 
 	free(options->debug_options);
 	free(options);
+}
+
+void options_printhelp() {
+	const char* help_message =
+		"bic [--debug-scan] [--debug-parse] [--no-asm] [--help] <input filename>\n"
+		"	--debug-scan:	Print scan debugging\n"
+		"	--debug-parse: 	Print parse debugging\n"
+		"	--no-asm:		Disable assembly output\n"
+		"	--help:			Print this help message";
+
+	printf("%s\n", help_message);
 }

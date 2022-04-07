@@ -105,9 +105,13 @@ toktype_t token_gettype(const char* token) {
     if (tok_len > 2 && token[1] == '/' && token[2] == '/') return TT_COMMENT;
     if (tok_len >= 2 && token[0] == '\"' && token[tok_len - 1] == '\"') return TT_STRING;
 
-    for (int i = 0; i < R_R15; i++) {
-        const char* reg_name = reg_getname((regtype_t) i);
-        if (reg_name != NULL && strcmp(lower_token, reg_name) == 0) return TT_REG;
+	static list_t* all_registers = NULL;
+	if (all_registers == NULL) {
+		all_registers = reg_getall();
+	}
+    for (int i = 0; i < all_registers->count; i++) {
+		reg_t* reg = all_registers->items[i];
+        if (reg->name != NULL && strcmp(lower_token, reg->name) == 0) return TT_REG;
     }
 
     // now we go over the keywords

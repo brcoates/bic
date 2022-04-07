@@ -37,7 +37,9 @@ struct symbol {
 		SF_VAR 		= (1 << 3),
 		SF_INT 		= (1 << 4),
 		SF_FLT		= (1 << 5),
-		SF_STR 		= (1 << 6)
+		SF_STR 		= (1 << 6),
+		SF_EXE		= (1 << 7),
+		SF_DATA		= (1 << 8)
 	} flags;
 	segment_t* segment;
 	enum {
@@ -53,7 +55,7 @@ struct symbol {
 };
 symbol_t* asm_symbol_add(char* name, enum symbolflags flags, unsigned long offset);
 symbol_t* asm_symbol_lookup(char* name);
-void asm_symbol_print_table();
+void asm_symbol_printtable();
 
 typedef struct {
 	list_t* symbols;
@@ -61,7 +63,7 @@ typedef struct {
 	char* output;
 } asm_state_t;
 void asm_initstate();
-//reg_t* asm_regalloc();
+reg_t* asm_getstatereg(regtype_t reg_type);
 
 // Entrypoint
 char* asm_codegen(parse_t* parse);
@@ -74,6 +76,7 @@ void asm_walk_instruction(node_t* node);
 void asm_walk_proc(node_t* node);
 void asm_walk_call(node_t* node);
 
+operand_t* asm_getoperandfromsymbol(symbol_t* sym_ident);
 list_t* asm_getoperands(node_t* operands_node);
 void asm_ins_scanoperands(node_t* node, char* opcode_name, list_t** operands, int max_args);
 char* asm_ins_resolveoperandasm(operand_t* operand);

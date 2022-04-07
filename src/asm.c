@@ -13,13 +13,11 @@
 
 #include <include/s_util.h>
 
+void asm_symbol_printtable_flag(int* num_flags, symbol_t* symbol, enum symbolflags flag, const char* flag_name);
+
 static asm_state_t* asm_state = NULL;
 
 char* asm_codegen(parse_t* parse) {
-	
-	opcode_t opcode = OP_ADD;
-	list_t* operands = list_create();
-
 	ins_initstate(false);
 	asm_initstate();
 	assert(asm_state != NULL);
@@ -59,7 +57,7 @@ void asm_walk_node(node_t* node) {
 			break;
 
 		default:
-			fprintf(stderr, "Unsupported feature, %s\n", parse_getnodetypename(node->type));
+			log_fatal("unsupported feature, %s\n", parse_getnodetypename(node->type));
 			exit(1);
 	}
 }
@@ -97,12 +95,14 @@ void asm_walk_proc(node_t* node) {
 				case PRIM_FLT: arg_flags |= SF_FLT; break;
 				case PRIM_STR: arg_flags |= SF_STR; break;
 				default: 
-					log_fatal(arg->token->line_num, "%s is not a valid primitive type\n", arg->token->str);
+					log_compile_fatal(arg->token->line_num, "%s is not a valid primitive type\n", arg->token->str);
 					exit(1);
 					break;
 			}
 
-			asm_symbol_add(arg->token->str, arg_flags, arg_idx);
+			symbol_t* arg_symbol = asm_symbol_add(arg->token->str, arg_flags, arg_idx * 8);
+			arg_symbol->base_type = BT_REGISTER;
+			arg_symbol->base->reg = asm_getstatereg(R_RBP);
 
 			arg = arg->next;
 
@@ -153,12 +153,13 @@ int asm_proc_getnumargs(node_t* node) {
 }
 
 void asm_walk_call(node_t* node) {
+	// TODO: COMPLETE THIS
 }
 
 void asm_walk_instruction(node_t* node) {
 	opcode_t opcode = opcode_getopcodetype(node->token->str);
 	if (opcode == OP_UNKNOWN) {
-		fprintf(stderr, "Unsupported opcode (%d) %s\n", opcode, node->token->str);
+		log_fatal("unsupported opcode (%d) %s\n", opcode, node->token->str);
 		exit(1);
 	}
 
@@ -173,7 +174,7 @@ void asm_walk_instruction(node_t* node) {
 			break;
 
 		default:
-			fprintf(stderr, "Unsupported codegen for opcode %s\n", opcode_gettypename(opcode));
+			log_fatal("unsupported codegen for opcode %s\n", opcode_gettypename(opcode));
 			exit(1);
 			return;
 	}
@@ -188,7 +189,7 @@ list_t* asm_getoperands(node_t* operands_node) {
 		assert(curr->token != NULL);
 		switch (curr->token->type) {
 			case TT_REG: {
-				reg_t* reg = reg_create(reg_gettype(curr->token->str));
+				reg_t* reg = asm_getstatereg(reg_gettype(curr->token->str));
 				
 				operand_t* operand_reg = operand_create(operand_getregtype(reg));
 				operand_reg->reg = reg;
@@ -213,12 +214,20 @@ list_t* asm_getoperands(node_t* operands_node) {
 			}
 
 			case TT_IDENT: {
-				operand_t* operand_ident = operand_create(OT_m64);
-				break; // TODO: FILL THIS IN
+				// basically, when we have an identifier, it could be a number of different things which will change
+				// how the identifier is handled (i.e. if it's a constant, then it will be handled differently to a
+				// local variable, for instance.
+				symbol_t* ident_symbol = asm_symbol_lookup(curr->token->str);
+				if (ident_symbol == NULL) {
+					log_fatal("symbol `%s` could not be resolved\n", curr->token->str);
+					exit(1);
+				}
+				list_additem(operands, asm_getoperandfromsymbol(ident_symbol));
+				break;
 			}
 
 			default:
-				fprintf(stderr, "Unsupported operand, %s\n", curr->token->str);
+				log_fatal("unsupported operand, %s\n", curr->token->str);
 				exit(1);
 				break;
 		}
@@ -228,13 +237,19 @@ list_t* asm_getoperands(node_t* operands_node) {
 	return operands;
 }
 
+operand_t* asm_getoperandfromsymbol(symbol_t* sym_ident) {
+	return NULL; // TODO: fill this in
+}
+
 void asm_ins_scanoperands(node_t* node, char* opcode_name, list_t** operands, int max_args) {
 	node_t* operands_node = node->body;
 	assert(operands_node->type == NT_OPERAND_LIST);
 
 	*operands = asm_getoperands(operands_node);
+	assert(*operands != NULL);
 	if ((*operands)->count != max_args) {
-		log_fatal(node->token->line_num, "%s opcode candidate requires %d arguments\n", opcode_name, max_args);
+		log_compile_fatal(node->token->line_num, "%s opcode candidate requires %d arguments, got %d\n", 
+				opcode_name, max_args, (*operands)->count);
 		exit(1);
 	}
 }
@@ -262,18 +277,31 @@ void asm_ins_add(node_t* node) {
 	assert(operands != NULL);
 	operand_t* op1 = operands->items[0];
 	operand_t* op2 = operands->items[1];
+
+	char code[200];
+	sprintf(code, "add %s, %s\n", asm_ins_resolveoperandasm(op1), asm_ins_resolveoperandasm(op2));
+	asm_appendasm(code);
 }
 
 char* asm_ins_resolveoperandasm(operand_t* operand) {
+	assert(operand != NULL);
 	// TODO: IMPLEMENT
+	return operand->token->str;
 }
 
 symbol_t* asm_symbol_add(char* name, enum symbolflags flags, unsigned long offset) {
+	if (asm_symbol_lookup(name) != NULL) {
+		log_fatal("redefinition of symbol with name `%s`\n", name);
+		exit(1);
+	}
+
 	symbol_t* symbol = calloc(1, sizeof(symbol_t));
 	symbol->base = calloc(1, sizeof(union base));
 	symbol->name = name;
 	symbol->flags = flags;
 	symbol->offset = offset;
+
+	list_additem(asm_state->symbols, symbol);
 
 	return symbol;
 }
@@ -281,7 +309,7 @@ symbol_t* asm_symbol_add(char* name, enum symbolflags flags, unsigned long offse
 symbol_t* asm_symbol_lookup(char* name) {
 	for (int i = 0; i < asm_state->symbols->count; i++) {
 		symbol_t* sym = asm_state->symbols->items[i];
-		if (strcmp(sym->name, name) == 0) return sym;
+		if (s_eq(sym->name, name)) return sym;
 	}
 	return NULL;
 }
@@ -348,4 +376,56 @@ scope_t* asm_scope_create(stackframe_t* frame, bool is_global) {
 	scope->is_global = is_global;
 
 	return scope;
+}
+
+reg_t* asm_getstatereg(regtype_t reg_type) {
+	for (int i = 0; i < asm_state->registers->count; i++) {
+		reg_t* reg = asm_state->registers->items[i];
+		if (reg_type == reg->type) return reg;
+	}
+	return NULL;
+}
+
+void asm_symbol_printtable() {
+	for (int i = 0; i < asm_state->symbols->count; i++) {
+		symbol_t* sym = asm_state->symbols->items[i];
+		printf("symbol { name = '%s'; flags = ", sym->name);
+
+		int num_flags = 0;
+		if (sym->flags & SF_UNKNOWN) asm_symbol_printtable_flag(&num_flags, sym, SF_UNKNOWN, "SF_");
+		if (sym->flags & SF_PROC) asm_symbol_printtable_flag(&num_flags, sym, SF_PROC, "SF_PROC");
+		if (sym->flags & SF_PROC_ARG) asm_symbol_printtable_flag(&num_flags, sym, SF_PROC_ARG, "SF_PROC_ARG");
+		if (sym->flags & SF_VAR) asm_symbol_printtable_flag(&num_flags, sym, SF_VAR, "SF_VAR");
+		if (sym->flags & SF_INT) asm_symbol_printtable_flag(&num_flags, sym, SF_INT, "SF_INT");
+		if (sym->flags & SF_FLT) asm_symbol_printtable_flag(&num_flags, sym, SF_FLT, "SF_FLT");
+		if (sym->flags & SF_STR) asm_symbol_printtable_flag(&num_flags, sym, SF_STR, "SF_STR");
+		if (sym->flags & SF_EXE) asm_symbol_printtable_flag(&num_flags, sym, SF_EXE, "SF_EXE");
+		if (sym->flags & SF_DATA) asm_symbol_printtable_flag(&num_flags, sym, SF_DATA, "SF_DATA");
+
+		char* base_type_name;
+		if (sym->base_type == BT_UNKNOWN) base_type_name = "??";
+		else if (sym->base_type == BT_REGISTER) base_type_name = "reg";
+		else if (sym->base_type == BT_SYMBOL) base_type_name = "symbol";
+		else base_type_name = "internal error";
+		printf("; base(%s) = ", base_type_name);
+
+		if (sym->base_type == BT_REGISTER) {
+			printf("%%%s(%lu)", sym->base->reg->name, sym->base->reg->sz);
+		} else if (sym->base_type == BT_SYMBOL) {
+			printf("[%s]", sym->base->symbol->name);
+		} else {
+			printf("??");
+		}
+
+		printf("; offset = %lu; }\n", sym->offset);
+	}
+}
+
+void asm_symbol_printtable_flag(int* num_flags, symbol_t* symbol, enum symbolflags flag, const char* flag_name) {
+	bool is_match = symbol->flags & flag;
+	if (is_match) {
+		if (*num_flags > 0) printf(" | ");
+		printf("%s", flag_name);
+		*num_flags = *num_flags + 1;
+	}
 }

@@ -1,10 +1,7 @@
-_mylabel:
-mov rcx, $32
-
 proc main:
 	int x;
 	int y;
 begin
 	mov rax, $1
-	add rax, $2
+	add rax, x
 endproc

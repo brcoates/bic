@@ -1,0 +1,2 @@
+mov rax, rbx
+add rax, $1
