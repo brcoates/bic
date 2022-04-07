@@ -29,7 +29,7 @@ scope_t* asm_scope_create(stackframe_t* frame, bool is_global);
 typedef struct symbol symbol_t;
 struct symbol {
 	char* name;
-	node_t* root_node;
+	// node_t* root_node;
 	enum symbolflags {
 		SF_UNKNOWN	= (1 << 0),
 		SF_PROC 	= (1 << 1),
@@ -51,7 +51,8 @@ struct symbol {
 		reg_t* reg;
 		symbol_t* symbol;
 	} * base;
-	unsigned long offset; // for proc args this will be the argument index
+	long offset; 
+	unsigned int ordinal; // keeping track of which argument #
 };
 symbol_t* asm_symbol_add(char* name, enum symbolflags flags, unsigned long offset);
 symbol_t* asm_symbol_lookup(char* name);
@@ -60,7 +61,10 @@ void asm_symbol_printtable();
 typedef struct {
 	list_t* symbols;
 	list_t* registers;
-	char* output;
+	char* code_output;
+	char* data_output;
+
+	list_t* reserved_registers;
 } asm_state_t;
 void asm_initstate();
 reg_t* asm_getstatereg(regtype_t reg_type);
@@ -83,7 +87,13 @@ char* asm_ins_resolveoperandasm(operand_t* operand);
 void asm_ins_mov(node_t* node);
 void asm_ins_add(node_t* node);
 
+// helper functions
+reg_t* asm_reg_reserve(size_t size);
+void asm_reg_clear();
+
+// assembly text-writer functions
 void asm_label(symbol_t* sym_label);
-void asm_appendasm(char* code);
+void asm_code_append(char* code);
+void asm_data_append(char* code);
 
 #endif

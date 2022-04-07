@@ -25,7 +25,23 @@ char* asm_codegen(parse_t* parse) {
 	node_t* curr = parse->node_head;
 	asm_walk(curr);
 
-	return asm_state->output;
+	if (asm_state->code_output == NULL) {
+		log_fatal("no executable output\n");
+		exit(1);
+	}
+
+	const char* boilerplate =	".bits 64\n"
+								"\n";
+
+	char* output = calloc(strlen(boilerplate) + 1, sizeof(char));
+	memcpy(output, boilerplate, strlen(boilerplate));
+
+	if (asm_state->data_output != NULL) {
+		s_append(output, asm_state->data_output);
+	}
+	strcpy(output, asm_state->code_output);
+
+	return output;
 }
 
 void asm_walk(node_t* node) {
@@ -65,7 +81,7 @@ void asm_walk_node(node_t* node) {
 void asm_walk_label(node_t* node) {
 	char buff[200];
 	sprintf(buff, "\t%s:\n", node->token->str);
-	asm_appendasm(buff);
+	asm_code_append(buff);
 }
 
 void asm_walk_proc(node_t* node) {
@@ -100,9 +116,10 @@ void asm_walk_proc(node_t* node) {
 					break;
 			}
 
-			symbol_t* arg_symbol = asm_symbol_add(arg->token->str, arg_flags, arg_idx * 8);
-			arg_symbol->base_type = BT_REGISTER;
-			arg_symbol->base->reg = asm_getstatereg(R_RBP);
+			symbol_t* arg_symbol = asm_symbol_add(arg->token->str, arg_flags, 0);
+			arg_symbol->ordinal = arg_idx + 1;
+			// arg_symbol->base_type = BT_REGISTER;
+			// arg_symbol->base->reg = asm_getstatereg(R_RBP);
 
 			arg = arg->next;
 
@@ -190,10 +207,10 @@ list_t* asm_getoperands(node_t* operands_node) {
 		switch (curr->token->type) {
 			case TT_REG: {
 				reg_t* reg = asm_getstatereg(reg_gettype(curr->token->str));
-				
+
 				operand_t* operand_reg = operand_create(operand_getregtype(reg));
 				operand_reg->reg = reg;
-				operand_reg->token = curr->token;
+				operand_reg->str = curr->token->str;
 
 				list_additem(operands, operand_reg);
 				break;
@@ -201,13 +218,7 @@ list_t* asm_getoperands(node_t* operands_node) {
 
 			case TT_NUM: {
 				operand_t* operand_num = operand_create(operand_getnumtype(curr->token->str));
-
-				// we will have to create a new token, that matches with a different string.
-				operand_num->token = token_create(
-					operand_getnumstr(curr->token->str), 
-					curr->token->line_num,
-					curr->token->type
-				);
+				operand_num->str = operand_getnumstr(curr->token->str);
 
 				list_additem(operands, operand_num);
 				break;
@@ -238,6 +249,47 @@ list_t* asm_getoperands(node_t* operands_node) {
 }
 
 operand_t* asm_getoperandfromsymbol(symbol_t* sym_ident) {
+	// if we are grabbing a constant value/ptr whatever, then we just need to return a basic operand
+	// that will contain the name of that symbol, which has already been written to the data segment
+	if (sym_ident->flags & SF_DATA) {
+		operand_t* data_ident_operand = operand_create(OT_m64);
+		data_ident_operand->str = sym_ident->name;
+		return data_ident_operand;
+	}
+
+	// if we've got a proc argument, then we need to ensure the operand takes in
+	if (sym_ident->flags & SF_PROC_ARG) {
+		operand_t* arg_operand = operand_create(OT_r64);
+
+		// ordering for function args are as follows:
+		// rcx, rdx, r8, r9, ...stack
+		if (sym_ident->ordinal > 4) {
+			arg_operand->has_offset = true;
+			arg_operand->offset = (sym_ident->ordinal - 4) * 8;
+			arg_operand->reg = asm_getstatereg(R_RBP);
+			arg_operand->str = sym_ident->name;
+		} else {
+			regtype_t reg_type;
+			switch (sym_ident->ordinal) {
+				case 1: reg_type = R_RCX; break;
+				case 2: reg_type = R_RDX; break;
+				case 3: reg_type = R_R8; break;
+				case 4: reg_type = R_R9; break;
+				default: 
+					log_fatal("unexpected ordinal value %d\n", sym_ident->ordinal);
+					exit(1);
+					break;
+			}
+
+			arg_operand->reg = asm_getstatereg(reg_type);
+		}
+
+		return arg_operand;
+	}
+
+	log_fatal("unsupported identifier symbol\n");
+	exit(1);
+
 	return NULL; // TODO: fill this in
 }
 
@@ -267,7 +319,7 @@ void asm_ins_mov(node_t* node) {
 
 	char code[200];
 	sprintf(code, "mov %s, %s\n", asm_ins_resolveoperandasm(op1), asm_ins_resolveoperandasm(op2));
-	asm_appendasm(code);
+	asm_code_append(code);
 }
 
 void asm_ins_add(node_t* node) {
@@ -280,13 +332,44 @@ void asm_ins_add(node_t* node) {
 
 	char code[200];
 	sprintf(code, "add %s, %s\n", asm_ins_resolveoperandasm(op1), asm_ins_resolveoperandasm(op2));
-	asm_appendasm(code);
+	asm_code_append(code);
 }
 
 char* asm_ins_resolveoperandasm(operand_t* operand) {
 	assert(operand != NULL);
-	// TODO: IMPLEMENT
-	return operand->token->str;
+
+	// if we're dealing with a memory/label reference OR an immediate numerical value, then
+	// the value for our operand will be a standard string, which can be grabbed from `str`
+	if (operand->type & OC_MEMORY || operand->type & OC_IMM) {
+		return operand->str;
+	}
+
+	// if not, then let's see if we're using a register
+	if (operand->type & OC_REGISTER && !operand->has_offset) {
+		assert(operand->reg != NULL);
+		return operand->reg->name;
+	}
+
+	// handling done a little differently with 
+	if (operand->type & OC_REGISTER && operand->has_offset) {
+		// ok this case all that needs to be done is to basically: [$register + $offset]
+		char buff[200];
+		if (operand->offset != 0) {
+			sprintf(buff, "[%s%s%ld]", 
+				operand->reg->name, 
+				operand->offset < 0 ? "" : " + ",
+				operand->offset);
+		} else {
+			sprintf(buff, "[%s]", operand->reg->name);
+		}
+
+		char* buff_s = calloc(strlen(buff) + 1, sizeof(char));
+		strcpy(buff_s, buff);
+		return buff_s;
+	}
+
+	log_fatal("operand `%s` (%s) has no assembly generation path\n", operand->str, operand_gettypename(operand->type));
+	exit(1);
 }
 
 symbol_t* asm_symbol_add(char* name, enum symbolflags flags, unsigned long offset) {
@@ -336,27 +419,33 @@ stackframe_t* asm_stackframe_create(int num_args) {
 }
 
 void asm_stackframe_enter(stackframe_t* frame) {
-	asm_appendasm("push rbp\nmov rsp, rbp\n");
+	asm_code_append("push rbp\nmov rsp, rbp\n");
 
 	if (frame->size > 0) {
 		char str[100];
 		sprintf(str, "sub rsp, %lu\n", frame->size);
-		asm_appendasm(str);
+		asm_code_append(str);
 	}
 }
 
 void asm_stackframe_exit(stackframe_t* frame) {
-	asm_appendasm("mov rsp, rbp\npop rbp\nret\n");
+	asm_code_append("mov rsp, rbp\npop rbp\nret\n");
 }
 
 void asm_label(symbol_t* sym_label) {
-	asm_appendasm("\t");
-	asm_appendasm(sym_label->name);
-	asm_appendasm(":\n");
+	char label_buff[200];
+	sprintf(label_buff, "\t%s:\n", sym_label->name);
+	
+	if (sym_label->flags & SF_DATA) asm_data_append(label_buff);
+	else asm_code_append(label_buff);
 }
 
-void asm_appendasm(char* code) {
-	asm_state->output = s_append(asm_state->output, code);
+void asm_code_append(char* code) {
+	asm_state->code_output = s_append(asm_state->code_output, code);
+}
+
+void asm_data_append(char* code) {
+	asm_state->data_output = s_append(asm_state->data_output, code);
 }
 
 void asm_initstate() {
@@ -365,9 +454,31 @@ void asm_initstate() {
 	}
 
 	asm_state = calloc(1, sizeof(asm_state_t));
-	asm_state->output = NULL;
+	asm_state->code_output = NULL;
+	asm_state->data_output = NULL;
 	asm_state->symbols = list_create();
 	asm_state->registers = reg_getall();
+	asm_state->reserved_registers = list_create();
+}
+
+reg_t* asm_reg_reserve(size_t size) {
+	for (int i = 0; i < asm_state->registers->count; i++) {
+		reg_t* reg = asm_state->registers->items[i];
+		if (reg->sz == size) {
+			// now check if it's in use
+			bool in_use = false;
+			for (int j = 0; j < asm_state->reserved_registers->count && !in_use; j++) {
+				reg_t* reserved_reg = asm_state->reserved_registers->items[j];
+				if (reserved_reg->type == reg->type) in_use = true;
+			}
+			if (!in_use) return reg;
+		}
+	}
+	return NULL;
+}
+
+void asm_reg_clear() {
+	asm_state->reserved_registers->count = 0;
 }
 
 scope_t* asm_scope_create(stackframe_t* frame, bool is_global) {

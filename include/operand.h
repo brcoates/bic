@@ -1,6 +1,8 @@
 #ifndef OPERAND_H
 #define OPERAND_H
 
+#include <stdbool.h>
+
 #include <include/reg.h>
 #include <include/scan.h>
 
@@ -11,19 +13,19 @@
  */
 
 typedef enum {
-	OC_REGISTER	= 0x00000000,
-	OC_MEMORY	= 0x01000000,
-	OC_IMM		= 0x02000000,
-	OC_SEGOFF	= 0x04000000, // segoff/moffsXX operands specify a simple offset relative to the segment base
-	OC_UNKNOWN 	= 0x08000000
+	OC_REGISTER	= 0x01000000,
+	OC_MEMORY	= 0x02000000,
+	OC_IMM		= 0x04000000,
+	OC_SEGOFF	= 0x08000000, // segoff/moffsXX operands specify a simple offset relative to the segment base
+	OC_UNKNOWN 	= 0x0F000000
 } operandclass_t;
 
 typedef enum {
-	OS_8		= 0x00000000,
-	OS_16		= 0x00010000,
-	OS_32		= 0x00020000,
-	OS_64		= 0x00040000,
-	OS_UNKNOWN 	= 0x00080000
+	OS_8		= 0x00010000,
+	OS_16		= 0x00020000,
+	OS_32		= 0x00040000,
+	OS_64		= 0x00080000,
+	OS_UNKNOWN 	= 0x000F0000
 } operandsize_t;
 
 typedef enum {
@@ -52,8 +54,11 @@ typedef enum {
 
 typedef struct {
 	operandtype_t type;
+	char* str;
+
 	reg_t* reg;
-	token_t* token;
+	bool has_offset;
+	long offset;
 } operand_t;
 
 operandtype_t operand_getregtype(reg_t* reg);

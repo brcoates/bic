@@ -1,7 +1,14 @@
 proc main:
-	int x;
-	int y;
+	int a;
+	int b;
+	int c;
+	int d;
+	int e;
 begin
 	mov rax, $1
-	add rax, x
+	add rax, a
+	add rax, b
+	add rax, c
+	add rax, d
+	add rax, e
 endproc

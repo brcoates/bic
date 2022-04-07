@@ -32,24 +32,24 @@ const char* reg_getname(regtype_t reg) {
 regtype_t reg_gettype(char* str) {
 	char* str_lower = s_tolower(str);
 	
-	if (strcmp(str_lower, "rax")) return R_RAX;
-	if (strcmp(str_lower, "rbx")) return R_RBX;
-	if (strcmp(str_lower, "rcx")) return R_RCX;
-	if (strcmp(str_lower, "rdx")) return R_RDX;
-	if (strcmp(str_lower, "rbp")) return R_RBP;
-	if (strcmp(str_lower, "rsp")) return R_RSP;
-	if (strcmp(str_lower, "eax")) return R_EAX;
-	if (strcmp(str_lower, "ebx")) return R_EBX;
-	if (strcmp(str_lower, "ecx")) return R_ECX;
-	if (strcmp(str_lower, "edx")) return R_EDX;
-	if (strcmp(str_lower, "r8")) return R_R8;
-	if (strcmp(str_lower, "r9")) return R_R9;
-	if (strcmp(str_lower, "r10")) return R_R10;
-	if (strcmp(str_lower, "r11")) return R_R11;
-	if (strcmp(str_lower, "r12")) return R_R12;
-	if (strcmp(str_lower, "r13")) return R_R13;
-	if (strcmp(str_lower, "r14")) return R_R14;
-	if (strcmp(str_lower, "r15")) return R_R15;
+	if (s_eqi(str_lower, "rax")) return R_RAX;
+	if (s_eqi(str_lower, "rbx")) return R_RBX;
+	if (s_eqi(str_lower, "rcx")) return R_RCX;
+	if (s_eqi(str_lower, "rdx")) return R_RDX;
+	if (s_eqi(str_lower, "rbp")) return R_RBP;
+	if (s_eqi(str_lower, "rsp")) return R_RSP;
+	if (s_eqi(str_lower, "eax")) return R_EAX;
+	if (s_eqi(str_lower, "ebx")) return R_EBX;
+	if (s_eqi(str_lower, "ecx")) return R_ECX;
+	if (s_eqi(str_lower, "edx")) return R_EDX;
+	if (s_eqi(str_lower, "r8")) return R_R8;
+	if (s_eqi(str_lower, "r9")) return R_R9;
+	if (s_eqi(str_lower, "r10")) return R_R10;
+	if (s_eqi(str_lower, "r11")) return R_R11;
+	if (s_eqi(str_lower, "r12")) return R_R12;
+	if (s_eqi(str_lower, "r13")) return R_R13;
+	if (s_eqi(str_lower, "r14")) return R_R14;
+	if (s_eqi(str_lower, "r15")) return R_R15;
 
 	return R_UNKNOWN;
 }
