@@ -6,6 +6,7 @@
 #include <include/scan.h>
 #include <include/log.h>
 #include <include/list.h>
+#include <include/s_util.h>
 
 static parse_state_t* parse_state = NULL;
 
@@ -40,19 +41,28 @@ node_t* parse_block(block_scope_t scope) {
 	do {
 		node_t* curr_node = NULL;
 
+		node_t* directive = parse_directive();
+		if (directive != NULL) {
+			curr_node = directive;
+		}
+
 		if (scope == BS_GLOB) {
 			node_t* procs = parse_proc();
 			if (procs != NULL) {
-				curr_node = procs;
+				if (curr_node != NULL) {
+					curr_node->next = procs;
+				} else {
+					curr_node = procs;
+				}
 			}
 		}
 
-		node_t* instructions = parse_instruction();
-		if (instructions != NULL) {
+		node_t* instruction = parse_instruction();
+		if (instruction != NULL) {
 			if (curr_node != NULL) {
-				curr_node->next = instructions; 
+				curr_node->next = instruction;
 			} else {
-				curr_node = instructions;
+				curr_node = instruction;
 			}
 		}
 
@@ -113,8 +123,8 @@ node_t* parse_call() {
 	list_t* arguments = list_create();
 	do {
 		token_t* arg_tok = parse_next();
-		if (arg_tok->type != TT_NUM && arg_tok->type != TT_REG && arg_tok->type != TT_IDENT) {
-			log_unexpected("number, register or identifier", arg_tok->str, arg_tok->line_num);
+		if (arg_tok->type != TT_NUM && arg_tok->type != TT_REG && arg_tok->type != TT_IDENT && arg_tok->type != TT_STRING) {
+			log_unexpected("number, string, register or identifier", arg_tok->str, arg_tok->line_num);
 			exit(1);
 		}
 		list_additem(arguments, arg_tok);
@@ -148,6 +158,39 @@ node_t* parse_call() {
 	}
 	
 	return call_node;
+}
+
+node_t* parse_directive() {
+	if (parse_current()->type != TT_DIRECTIVE) {
+		return NULL;
+	}
+
+	// basically a directive is simply <directive> <argument>
+	node_t* directive = parse_createnode(NT_DIRECTIVE);
+	directive->token = parse_current();
+
+	// seeing as we only have a single directive, just do a simple string match to validate.
+	if (!s_eqi(directive->token->str, "#extern")) {
+		log_compile_fatal(directive->token->line_num, "directive `%s` is not recognised\n", directive->token->str);
+		exit(1);
+	}
+
+	// now, let's grab the argument. seeing as we only have one directive, all we need (for now) is just to ensure
+	// this is a string. we can do fancy shit later on.
+	token_t* directive_arg_token = parse_next();
+	if (directive_arg_token->type != TT_STRING) {
+		log_unexpected("string", directive_arg_token->str, directive_arg_token->line_num);
+		exit(1);
+	}
+
+	node_t* directive_arg = parse_createnode(NT_DIRECTIVE_ARG);
+	directive_arg->token = directive_arg_token;
+
+	directive->body = directive_arg;
+
+	parse_next(); // walk over this one
+
+	return directive;
 }
 
 node_t* parse_instruction() {
@@ -311,6 +354,7 @@ const char* parse_getnodetypename(nodetype_t type) {
 		case NT_CALL: return "NT_CALL";
 		case NT_CALL_ARG: return "NT_CALL_ARG";
 		case NT_CALL_ARGS_LIST: return "NT_CALL_ARGS_LIST";
+		case NT_DIRECTIVE: return "NT_DIRECTIVE";
 		default: return NULL;
 	}
 }

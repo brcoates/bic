@@ -1,0 +1,8 @@
+#extern "printf"
+#extern "ExitProcess"
+
+proc main:
+begin
+	call printf "Hello world"
+	call ExitProcess $0
+endproc

@@ -53,6 +53,7 @@ struct symbol {
 	} * base;
 	long offset; 
 	unsigned int ordinal; // keeping track of which argument #
+	regtype_t stored_in_reg;
 };
 symbol_t* asm_symbol_add(char* name, enum symbolflags flags, unsigned long offset);
 symbol_t* asm_symbol_lookup(char* name);
@@ -61,6 +62,7 @@ void asm_symbol_printtable();
 typedef struct {
 	list_t* symbols;
 	list_t* registers;
+	char* glob_output;
 	char* code_output;
 	char* data_output;
 
@@ -75,6 +77,7 @@ char* asm_codegen(parse_t* parse);
 // Walk functions
 void asm_walk(node_t* node);
 void asm_walk_node(node_t* node);
+void asm_walk_directive(node_t* node);
 void asm_walk_label(node_t* node);
 void asm_walk_instruction(node_t* node);
 void asm_walk_proc(node_t* node);
@@ -88,8 +91,10 @@ void asm_ins_mov(node_t* node);
 void asm_ins_add(node_t* node);
 
 // helper functions
-reg_t* asm_reg_reserve(size_t size);
-void asm_reg_clear();
+bool asm_reg_reserve(regtype_t reg);
+void asm_reg_clear(regtype_t reg);
+reg_t* asm_reg_reservesize(size_t size);
+void asm_reg_clearall();
 
 // assembly text-writer functions
 void asm_label(symbol_t* sym_label);

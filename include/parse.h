@@ -24,6 +24,8 @@ typedef enum nodetype {
 	NT_CALL,
 	NT_CALL_ARGS_LIST,
 	NT_CALL_ARG,
+	NT_DIRECTIVE,
+	NT_DIRECTIVE_ARG
 } nodetype_t;
 
 struct node {
@@ -58,6 +60,7 @@ node_t* parse_block(block_scope_t scope);
 node_t* parse_label();
 node_t* parse_instruction();
 node_t* parse_call();
+node_t* parse_directive();
 
 node_t* parse_proc();
 node_t* parse_proc_args();

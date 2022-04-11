@@ -20,7 +20,7 @@ char* s_append(char* dst, char* str) {
 char* s_alloc(const char* initial_val) {
     assert(initial_val != NULL);
 
-    char* str = calloc(strlen(initial_val), sizeof(char));
+    char* str = calloc(strlen(initial_val) + 1, sizeof(char));
     strcpy(str, initial_val);
 
     return str;

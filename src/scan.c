@@ -104,6 +104,7 @@ toktype_t token_gettype(const char* token) {
     if (tok_len > 1 && token[0] == '$') return TT_NUM;
     if (tok_len > 2 && token[1] == '/' && token[2] == '/') return TT_COMMENT;
     if (tok_len >= 2 && token[0] == '\"' && token[tok_len - 1] == '\"') return TT_STRING;
+	if (tok_len >= 2 && token[0] == '#') return TT_DIRECTIVE;
 
 	static list_t* all_registers = NULL;
 	if (all_registers == NULL) {
@@ -128,9 +129,12 @@ toktype_t token_gettype(const char* token) {
 
 const char* token_gettypename(toktype_t type) {
     switch (type) {
+		case TT_UNKNOWN: return "TT_UNKNOWN";
+		case TT_OPCODE: return "TT_OPCODE";
         case TT_IDENT: return "TT_IDENT";
         case TT_REG: return "TT_REG";
         case TT_NUM: return "TT_NUM";
+		case TT_STRING: return "TT_STRING";
         case TT_COMMENT: return "TT_COMMENT";
         case TT_COMMA: return "TT_COMMA";
         case TT_COLON: return "TT_COLON";
@@ -141,10 +145,9 @@ const char* token_gettypename(toktype_t type) {
         case TT_KEYWORD_IF: return "TT_KEYWORD_IF";
         case TT_KEYWORD_ELSE: return "TT_KEYWORD_ELSE";
         case TT_KEYWORD_ENDIF: return "TT_KEYWORD_ENDIF";
-		case TT_OPCODE: return "TT_OPCODE";
 		case TT_KEYWORD_PRIMTYPE: return "TT_KEYWORD_PRIMTYPE";
 		case TT_KEYWORD_CALL: return "TT_KEYWORD_CALL";
-		case TT_UNKNOWN: return "TT_UNKNOWN";
+		case TT_DIRECTIVE: return "TT_DIRECTIVE";
         default: return "??";
     }
 }

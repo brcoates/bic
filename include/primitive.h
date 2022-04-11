@@ -13,6 +13,8 @@ typedef enum {
 primitive_t prim_gettype(char* str);
 const char* prim_gettypename(primitive_t prim);
 
+char* prim_getstringvalue(char* literal);
+
 bool prim_isprimitive(char* str);
 
 #endif

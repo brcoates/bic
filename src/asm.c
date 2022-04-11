@@ -30,16 +30,15 @@ char* asm_codegen(parse_t* parse) {
 		exit(1);
 	}
 
-	const char* boilerplate =	".bits 64\n"
-								"\n";
-
-	char* output = calloc(strlen(boilerplate) + 1, sizeof(char));
-	memcpy(output, boilerplate, strlen(boilerplate));
+	char* output = s_alloc(asm_state->glob_output);
 
 	if (asm_state->data_output != NULL) {
-		s_append(output, asm_state->data_output);
+		output = s_append(output, "section .data\n");
+		output = s_append(output, asm_state->data_output);
 	}
-	strcpy(output, asm_state->code_output);
+
+	output = s_append(output, "\nsection .text\n");
+	output = s_append(output, asm_state->code_output);
 
 	return output;
 }
@@ -72,10 +71,27 @@ void asm_walk_node(node_t* node) {
 			asm_walk_label(node);
 			break;
 
+		case NT_CALL: 
+			asm_walk_call(node);
+			break;
+
+		case NT_DIRECTIVE:
+			asm_walk_directive(node);
+			break;
+
 		default:
 			log_fatal("unsupported feature, %s\n", parse_getnodetypename(node->type));
 			exit(1);
 	}
+}
+
+void asm_walk_directive(node_t* node) {
+	// the only directive supported is extern, and this is validated during parsing, so we don't really need
+	// to have anything fancy here, and it get's the job done. gg.
+	char buff[200];
+	sprintf(buff, "extern %s\n", prim_getstringvalue(node->body->token->str));
+
+	asm_state->glob_output = s_append(asm_state->glob_output, buff);
 }
 
 void asm_walk_label(node_t* node) {
@@ -170,7 +186,7 @@ int asm_proc_getnumargs(node_t* node) {
 }
 
 void asm_walk_call(node_t* node) {
-	// TODO: COMPLETE THIS
+	// okidoki, this should be pretty straightforward. Basically we just need to 
 }
 
 void asm_walk_instruction(node_t* node) {
@@ -281,6 +297,8 @@ operand_t* asm_getoperandfromsymbol(symbol_t* sym_ident) {
 					break;
 			}
 
+			sym_ident->stored_in_reg = reg_type;
+
 			arg_operand->reg = asm_getstatereg(reg_type);
 		}
 
@@ -383,6 +401,7 @@ symbol_t* asm_symbol_add(char* name, enum symbolflags flags, unsigned long offse
 	symbol->name = name;
 	symbol->flags = flags;
 	symbol->offset = offset;
+	symbol->stored_in_reg = R_UNKNOWN;
 
 	list_additem(asm_state->symbols, symbol);
 
@@ -454,14 +473,19 @@ void asm_initstate() {
 	}
 
 	asm_state = calloc(1, sizeof(asm_state_t));
-	asm_state->code_output = NULL;
-	asm_state->data_output = NULL;
+	asm_state->glob_output = s_alloc("bits 64\ndefault rel\nglobal main\n\n");
+	asm_state->code_output = NULL; // s_alloc("\tsection .text\n");
+	asm_state->data_output = NULL; // s_alloc("\tsection .data\n");
 	asm_state->symbols = list_create();
 	asm_state->registers = reg_getall();
 	asm_state->reserved_registers = list_create();
 }
 
-reg_t* asm_reg_reserve(size_t size) {
+void asm_reg_clear(regtype_t regtype) {}
+
+bool asm_reg_reserve(regtype_t regtype) {}
+
+reg_t* asm_reg_reservesize(size_t size) {
 	for (int i = 0; i < asm_state->registers->count; i++) {
 		reg_t* reg = asm_state->registers->items[i];
 		if (reg->sz == size) {
@@ -477,7 +501,7 @@ reg_t* asm_reg_reserve(size_t size) {
 	return NULL;
 }
 
-void asm_reg_clear() {
+void asm_reg_clearall() {
 	asm_state->reserved_registers->count = 0;
 }
 

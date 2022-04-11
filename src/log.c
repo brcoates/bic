@@ -22,7 +22,7 @@ void log_compile_fatal(int line_num, char* fmt, ...) {
 	va_list args;
 	va_start(args, fmt);
 
-	fprintf(stderr, "%s line %d, ", log_resolve_level_str(L_FATAL, true), line_num);
+	fprintf(stderr, "%s line %d: ", log_resolve_level_str(L_FATAL, true), line_num);
 	vfprintf(stderr, fmt, args);
 
 	va_end(args);

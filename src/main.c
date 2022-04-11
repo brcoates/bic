@@ -111,7 +111,7 @@ void options_setup(int argc, char** argv) {
 	}
 
 	options->debug_options->print_scans = false;
-	options->debug_options->print_parse = true; 
+	options->debug_options->print_parse = false; 
 	options->debug_options->print_asm = true;
 	if (argc > 1) {
 		for (int i = 1; i < argc; i++) {
