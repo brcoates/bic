@@ -37,72 +37,73 @@ node_t* parse_block(block_scope_t scope) {
 	node_t* root = parse_createnode(NT_BODY);
 	node_t* next_node = root;
 	bool is_first = true;
+	bool iteration_yield = false;
 
 	do {
-		node_t* curr_node = NULL;
+		iteration_yield = false;
 
 		node_t* directive = parse_directive();
 		if (directive != NULL) {
-			curr_node = directive;
+			if (is_first) next_node->body = directive;
+			else next_node->next = directive;
+			is_first = false;
+			next_node = directive;
+
+			iteration_yield = true;
 		}
 
 		if (scope == BS_GLOB) {
-			node_t* procs = parse_proc();
-			if (procs != NULL) {
-				if (curr_node != NULL) {
-					curr_node->next = procs;
-				} else {
-					curr_node = procs;
-				}
+			node_t* proc = parse_proc();
+			if (proc != NULL) {
+				if (is_first) next_node->body = proc;
+				else next_node->next = proc;
+				is_first = false;
+				next_node = proc;
+
+				iteration_yield = true;
 			}
 		}
 
 		node_t* instruction = parse_instruction();
 		if (instruction != NULL) {
-			if (curr_node != NULL) {
-				curr_node->next = instruction;
-			} else {
-				curr_node = instruction;
-			}
+			if (is_first) next_node->body = instruction;
+			else next_node->next = instruction; 
+			is_first = false;
+			next_node = instruction;
+
+			iteration_yield = true;
 		}
 
 		node_t* call = parse_call();
 		if (call != NULL) {
-			if (curr_node != NULL) {
-				curr_node->next = call; 
-			} else {
-				curr_node = call;
-			}
+			if (is_first) next_node->body = call;
+			else next_node->next = call; 
+			is_first = false;
+			next_node = call;
+
+			iteration_yield = true;
 		}
 
 		node_t* label = parse_label();
 		if (label != NULL) {
-			if (curr_node != NULL) {
-				curr_node->next = label;
-			} else {
-				curr_node = label;
-			}
-		}
-		
-		// this will allow us to continually chain nodes
-		if (is_first) {
-			next_node->body = curr_node;
-		} else {
-			next_node->next = curr_node;
-		}
-		next_node = curr_node;
+			if (is_first) next_node->body = label;
+			else next_node->next = label;
+			is_first = false;
+			next_node = label;
 
-		is_first = false;
-	} while (next_node != NULL && parse_canmovenext());
+			iteration_yield = true;
+		}
+	} while (
+		(scope == BS_GLOB || parse_current()->type != TT_KEYWORD_ENDPROC) &&
+		(iteration_yield && next_node != NULL && parse_canmovenext())
+	);
 
 	return root;
 }
 
 node_t* parse_label() {
-	if (!parse_canmovenext()) return NULL;
-
 	token_t* label_ident = parse_current();
-	if (label_ident->type != TT_IDENT || parse_peeknext()->type != TT_COLON) return NULL;
+	if (label_ident->type != TT_IDENT || !parse_canmovenext() || parse_peeknext()->type != TT_COLON) return NULL;
 
 	parse_next();
 	parse_next();
@@ -121,6 +122,7 @@ node_t* parse_call() {
 
 	// ok great, now we have the details we can go ahead and grab the arguments/operands
 	list_t* arguments = list_create();
+	int num_args = 0;
 	do {
 		token_t* arg_tok = parse_next();
 		if (arg_tok->type != TT_NUM && arg_tok->type != TT_REG && arg_tok->type != TT_IDENT && arg_tok->type != TT_STRING) {
@@ -128,7 +130,9 @@ node_t* parse_call() {
 			exit(1);
 		}
 		list_additem(arguments, arg_tok);
-	} while (parse_next()->type == TT_COMMA);
+		fflush(stdout);
+		num_args = num_args + 1;
+	} while (parse_canmovenext() && parse_next()->type == TT_COMMA);
 
 	// great, now we've got all the args & the name, let's go ahead and construct our node and return
 	node_t* call_node = parse_createnode(NT_CALL);
@@ -188,7 +192,7 @@ node_t* parse_directive() {
 
 	directive->body = directive_arg;
 
-	parse_next(); // walk over this one
+	if (parse_canmovenext()) parse_next(); // walk over this one
 
 	return directive;
 }
@@ -289,8 +293,7 @@ node_t* parse_proc() {
 		log_unexpected("endproc", parse_current()->str, parse_current()->line_num);
 		exit(1);
 	}
-	if (parse_canmovenext())
-		parse_next();
+	if (parse_canmovenext()) parse_next();
 
 	return proc;
 }
@@ -379,7 +382,10 @@ token_t* parse_prev() {
 }
 
 bool parse_canmovenext() {
-	return parse_state->scan_idx + 1 < parse_state->scan->tokens->count;
+	bool condition = parse_state->scan_idx + 1 < parse_state->scan->tokens->count;
+	// int* num = NULL;
+	// if (!condition) *num = 0;
+	return condition;
 }
 
 node_t* parse_createnode(nodetype_t type) {

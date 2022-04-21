@@ -91,6 +91,7 @@ void asm_ins_mov(node_t* node);
 void asm_ins_add(node_t* node);
 
 // helper functions
+bool asm_reg_isreserved(regtype_t reg);
 bool asm_reg_reserve(regtype_t reg);
 void asm_reg_clear(regtype_t reg);
 reg_t* asm_reg_reservesize(size_t size);

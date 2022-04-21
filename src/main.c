@@ -30,10 +30,11 @@ bool options_isswitch(char* str);
 int main(int argc, char** argv) {
 	options_setup(argc, argv);
 
-	if (options->input_filename == NULL) {
-		log_fatal("no input file specified\n");
-		exit(1);
-	}
+	options->input_filename = "/Users/ben/dev/bic/test/basic.txt";
+	// if (options->input_filename == NULL) {
+	// 	log_fatal("no input file specified\n");
+	// 	exit(1);
+	// }
 	FILE* fp = fopen(options->input_filename, "r");
 	if (fp == NULL) {
 		log_fatal("error opening file.\n");
@@ -51,6 +52,7 @@ int main(int argc, char** argv) {
 
 	parse_t* parse_root = parse(scan);
 	if (options->debug_options->print_parse) {
+		node_t* node = parse_root->node_head->body;
 		print_node(parse_root->node_head, "", 1, false);
 		printf("\n");
 	}

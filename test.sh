@@ -7,5 +7,5 @@ echo "---------------------------------------------------------"
 ./build.sh
 
 if [ $? -eq 0 ]; then
-	./bin/bic "./test/call.txt"
+	./bin/bic --debug-parse "./test/basic.txt"
 fi

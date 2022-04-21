@@ -186,7 +186,9 @@ int asm_proc_getnumargs(node_t* node) {
 }
 
 void asm_walk_call(node_t* node) {
-	// okidoki, this should be pretty straightforward. Basically we just need to 
+	// basically for a call, we need to figure out what args we have, and move these into the correct registers.
+	// TODO: implement register preservation
+	
 }
 
 void asm_walk_instruction(node_t* node) {

@@ -1,17 +1,16 @@
 #extern "printf"
 
-proc main:
+proc sum:
 	int a;
 	int b;
-	int c;
-	int d;
-	int e;
 begin
-	mov rax, $1
-	add rax, a
-	add rax, b
-	add rax, c
-	add rax, d
-	add rax, e
-	call printf "Test %d\n", a 
+	mov rcx, a
+	mov rax, b
+	add rax, rcx
+endproc
+
+proc main:
+begin
+	call sum 1, 2
+	call printf "%d + %d = %d", 1, 2, rax
 endproc
