@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <stdbool.h>
+
 #include <include/list.h>
 #include <include/operand.h>
 #include <include/instruction.h>
@@ -26,19 +27,22 @@ void ins_initstate(bool debug_log) {
 		for (int i = 0; i < ins_state->count; i++) {
 			instruction_t* ins = ins_state->items[i];
 			printf(
-				"%s: (%d operands)", 
+				"%s %d(", 
 				opcode_gettypename(ins->opcode),
 				ins->operands->count
 			);
 			for (int j = 0; j < ins->operands->count; j++) {
 				printf(
-					" %s",
+					" %s ",
 					operand_gettypename(((instruction_operand_t*) ins->operands->items[j])->operand_type)
 				);
 			}
-			printf("\n");
+			printf(")\n");
 		}
 	}
+
+	if (debug_log && ins_resolve(OP_PUSH, 1, OT_r64) != NULL) printf("Tests passed!\n");
+	else if (debug_log) printf("Tests failed\n");
 }
 
 void ins_init_mov() {
@@ -319,6 +323,7 @@ instruction_t* ins_create(opcode_t opcode, int num_operands, ...) {
 }
 
 instruction_t* ins_resolve(opcode_t opcode, int num_operands, ...) {
+	// TODO: fix the silly inconsistency with the operands here and that of below
 	va_list args;
 	va_start(args, num_operands);
 
@@ -368,4 +373,8 @@ instruction_operand_t* ins_operand_create(operandtype_t type) {
 	ins_operand->operand_type = type;
 
 	return ins_operand;
+}
+
+instruction_operand_t* ins_operand_from(operand_t* operand) {
+	return ins_operand_create(operand->type);
 }

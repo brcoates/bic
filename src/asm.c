@@ -18,12 +18,13 @@ void asm_symbol_printtable_flag(int* num_flags, symbol_t* symbol, enum symbolfla
 static asm_state_t* asm_state = NULL;
 
 char* asm_codegen(parse_t* parse) {
-	ins_initstate(false);
+	ins_initstate(true);
 	asm_initstate();
 	assert(asm_state != NULL);
 
 	node_t* curr = parse->node_head;
-	asm_walk(curr);
+	context_t* root_ctx = asm_ctx_create(true);
+	asm_walk(curr, root_ctx);
 
 	if (asm_state->code_output == NULL) {
 		log_fatal("no executable output\n");
@@ -43,40 +44,40 @@ char* asm_codegen(parse_t* parse) {
 	return output;
 }
 
-void asm_walk(node_t* node) {
+void asm_walk(node_t* node, context_t* context) {
 	// basically, we need to walk each node object.
 	node_t* curr = node;
 	do {
-		asm_walk_node(curr);
+		asm_walk_node(curr, context);
 		curr = curr->next;
 	} while (curr != NULL);
 }
 
-void asm_walk_node(node_t* node) {
+void asm_walk_node(node_t* node, context_t* context) {
 	switch (node->type) {
 		case NT_BODY: 
 			assert(node->body != NULL);
-			asm_walk(node->body);
+			asm_walk(node->body, context);
 			break;
 
 		case NT_INSTRUCTION:
-			asm_walk_instruction(node);
+			asm_walk_instruction(node, context);
 			break;
 
 		case NT_PROC:
-			asm_walk_proc(node);
+			asm_walk_proc(node, context);
 			break;
 
 		case NT_LABEL:
-			asm_walk_label(node);
+			asm_walk_label(node, context);
 			break;
 
 		case NT_CALL: 
-			asm_walk_call(node);
+			asm_walk_call(node, context);
 			break;
 
 		case NT_DIRECTIVE:
-			asm_walk_directive(node);
+			asm_walk_directive(node, context);
 			break;
 
 		default:
@@ -85,7 +86,7 @@ void asm_walk_node(node_t* node) {
 	}
 }
 
-void asm_walk_directive(node_t* node) {
+void asm_walk_directive(node_t* node, context_t* context) {
 	// the only directive supported is extern, and this is validated during parsing, so we don't really need
 	// to have anything fancy here, and it get's the job done. gg.
 	char buff[200];
@@ -94,13 +95,13 @@ void asm_walk_directive(node_t* node) {
 	asm_state->glob_output = s_append(asm_state->glob_output, buff);
 }
 
-void asm_walk_label(node_t* node) {
+void asm_walk_label(node_t* node, context_t* context) {
 	char buff[200];
 	sprintf(buff, "\t%s:\n", node->token->str);
 	asm_code_append(buff);
 }
 
-void asm_walk_proc(node_t* node) {
+void asm_walk_proc(node_t* node, context_t* context) {
 	// first thing's first, lets go ahead and add this symbol
 	symbol_t* proc_symbol = asm_symbol_add(node->token->str, SF_PROC, 0);
 
@@ -160,7 +161,10 @@ void asm_walk_proc(node_t* node) {
 		if (curr->type == NT_BODY) proc_body = curr;
 		curr = curr->next;
 	}
-	if (proc_body != NULL) asm_walk(proc_body);
+
+	context_t* proc_body_ctx = asm_ctx_create(false);
+	context->body = proc_body_ctx;
+	if (proc_body != NULL) asm_walk(proc_body, proc_body_ctx);
 
 	asm_stackframe_exit(frame);
 }
@@ -185,13 +189,16 @@ int asm_proc_getnumargs(node_t* node) {
 	}
 }
 
-void asm_walk_call(node_t* node) {
-	// basically for a call, we need to figure out what args we have, and move these into the correct registers.
-	// TODO: implement register preservation
+void asm_walk_call(node_t* node, context_t* context) {
+	// first thing's first - let's push all registers to the stack to preserve em'
+	asm_ctx_pushad(context);
+	asm_code_append("nop");
 	
+	// finally, restore the stack
+	asm_ctx_popad(context);
 }
 
-void asm_walk_instruction(node_t* node) {
+void asm_walk_instruction(node_t* node, context_t* context) {
 	opcode_t opcode = opcode_getopcodetype(node->token->str);
 	if (opcode == OP_UNKNOWN) {
 		log_fatal("unsupported opcode (%d) %s\n", opcode, node->token->str);
@@ -265,6 +272,62 @@ list_t* asm_getoperands(node_t* operands_node) {
 
 	return operands;
 }
+
+void asm_ctx_pushad(context_t* ctx) {
+	stackframe_t* frame = ctx->scope->frame;
+
+	list_t* push_instructions = list_create();
+	for (int i = 0; i < asm_state->registers->count; i++) {
+		reg_t* reg = asm_state->registers->items[i];
+		if (reg_isgeneralpurpose(reg->type)) {
+			// grab the GP register size...
+			operandtype_t op_type;
+
+			assert(reg->sz == 8 || reg->sz == 16 || reg->sz == 32 || reg->sz == 64);
+			switch (reg->sz) {
+				case 8: op_type = OT_r8; break;
+				case 16: op_type = OT_r16; break;
+				case 32: op_type = OT_r32; break;
+				case 64: op_type = OT_r64; break;
+				default: 
+					log_fatal("internal error constructing operand for register with size: %s (%d)\n",
+						reg->name,
+						reg->sz);
+					exit(1);
+					break;
+			}
+
+			// construct initial push_reg instruction
+			instruction_t* push_reg = ins_resolve(OP_PUSH, 1, op_type);
+			if (push_reg == NULL) {
+				log_fatal(
+					"internal error - unable to resolve push instruction (%s 1(%s), asm_ctx_pushad)\n",
+					opcode_gettypename(OP_PUSH),
+					operand_gettypename(op_type)
+				);
+				exit(1);
+			}
+
+			// construct push reg, reg operand
+			list_t* operands_tmp = list_create();
+			operand_t* push_reg_operand_reg = operand_create(op_type);
+			push_reg_operand_reg->reg = reg;
+
+			list_additem(operands_tmp, push_reg_operand_reg);
+
+			char* push_reg_asm = asm_ins_asm(push_reg, operands_tmp);
+			asm_code_append(push_reg_asm);
+
+			// free everything up
+			free(push_reg);
+			free(push_reg_asm);
+			list_free(operands_tmp);
+		}
+	}
+
+}
+
+void asm_ctx_popad(context_t* ctx) {}
 
 operand_t* asm_getoperandfromsymbol(symbol_t* sym_ident) {
 	// if we are grabbing a constant value/ptr whatever, then we just need to return a basic operand
@@ -433,10 +496,18 @@ symbol_t* asm_symbol_lookup(char* name) {
 
 stackframe_t* asm_stackframe_create(int num_args) {
 	stackframe_t* frame = calloc(1, sizeof(stackframe_t));
-	if (num_args > 4) {
-		frame->size = (num_args - 4) * 64u;
-	}
+	frame->num_reserves = num_args - 4;
+	if (frame->num_reserves < 0) frame->num_reserves = 0;
+	asm_stackframe_resize(frame);
 	return frame;
+}
+
+void asm_stackframe_resize(stackframe_t* frame) {
+	if (frame->num_reserves > 0) {
+		frame->size = frame->num_reserves * 64u;
+	} else {
+		frame->size = 0;
+	}
 }
 
 void asm_stackframe_enter(stackframe_t* frame) {
@@ -481,6 +552,7 @@ void asm_initstate() {
 	asm_state->symbols = list_create();
 	asm_state->registers = reg_getall();
 	asm_state->reserved_registers = list_create();
+	asm_state->stack = list_create();
 }
 
 void asm_reg_clear(regtype_t regtype) {}
@@ -507,6 +579,28 @@ void asm_reg_clearall() {
 	asm_state->reserved_registers->count = 0;
 }
 
+context_t* asm_ctx_create(bool is_global_scope) {
+	context_t* ctx = calloc(1, sizeof(context_t));
+	ctx->scope = asm_scope_create(asm_stackframe_create(0), is_global_scope);
+
+	// if we don't have a global scope, then we must be in a proc/if statement/whatever
+	// for this, we will need to preserve the GP registers, so we will need to allocate
+	// for these.
+	if (!is_global_scope) {
+		// just grab the size, and add that to num_reserves, then call resize()
+		int num_gp_registers = 0;
+		for (int i = 0; i < asm_state->registers->count; i++) {
+			reg_t* reg = asm_state->registers->items[i];
+			assert(reg != NULL);
+			if (reg_isgeneralpurpose(reg->type)) num_gp_registers = num_gp_registers + 1;
+		}
+		ctx->scope->frame->num_reserves = ctx->scope->frame->num_reserves + num_gp_registers;
+		asm_stackframe_resize(ctx->scope->frame);
+	}
+
+	return ctx;
+}
+
 scope_t* asm_scope_create(stackframe_t* frame, bool is_global) {
 	scope_t* scope = calloc(1, sizeof(scope_t));
 	scope->frame = frame;
@@ -518,6 +612,7 @@ scope_t* asm_scope_create(stackframe_t* frame, bool is_global) {
 reg_t* asm_getstatereg(regtype_t reg_type) {
 	for (int i = 0; i < asm_state->registers->count; i++) {
 		reg_t* reg = asm_state->registers->items[i];
+		assert(reg != NULL);
 		if (reg_type == reg->type) return reg;
 	}
 	return NULL;
@@ -564,5 +659,74 @@ void asm_symbol_printtable_flag(int* num_flags, symbol_t* symbol, enum symbolfla
 		if (*num_flags > 0) printf(" | ");
 		printf("%s", flag_name);
 		*num_flags = *num_flags + 1;
+	}
+}
+
+const char* asm_ins_getsizespecifier(instruction_operand_t* operand) {
+	assert(
+		operand->operand_type & OS_8 ||
+		operand->operand_type & OS_16 ||
+		operand->operand_type & OS_32 ||
+		operand->operand_type & OS_64
+	);
+
+	if (operand->operand_type & OS_8) return "byte";
+	if (operand->operand_type & OS_16) return "word";
+	if (operand->operand_type & OS_32) return "dword";
+	if (operand->operand_type & OS_64) return "qword";
+	return NULL;
+}
+
+char* asm_ins_asm(instruction_t* instruction, list_t* operands) {
+	// SPEC:
+	// instruction contains the DECLARATION for the instruction (& operand DECALRATIONS)
+	// operands contain the DEFINITION for each operand
+
+	// basically we need to do a number of things:
+	// - validate the instruction & operands
+	// - convert the opcode to it's mnemonic
+	// - convert each operand to it's string representation
+	// - resolve the type specifier
+	// - concat: {mnemonic} {type specifier} {...operands}
+	
+	char* result = s_alloc("");
+	
+	// the opcode is easy, just grab from here...
+	const char* mnemonic = opcode_gettypename(instruction->opcode);
+	s_append(result, (char*) mnemonic);
+
+	// this next part is a little tricky, and probably won't work very
+	// but i hope it will just work to get the ball rolling - will need some more
+	// ground work in order to get this to work properly...
+	char* size_specifier;
+	switch (instruction->opcode) {
+		case OP_MOV: size_specifier = (char*) asm_ins_getsizespecifier(instruction->operands->items[0]); break;
+		case OP_ADD: size_specifier = (char*) asm_ins_getsizespecifier(instruction->operands->items[0]); break;
+		case OP_PUSH:
+		case OP_POP: 
+			size_specifier = (char*) asm_ins_getsizespecifier(instruction->operands->items[0]);
+			break;
+		default: size_specifier = NULL; break;
+	}
+	if (size_specifier != NULL) {
+		s_append(result, " ");
+		s_append(result, size_specifier);
+		s_append(result, " ");
+	}
+
+	return result;
+}
+
+void asm_stack_push(stackitem_t* item) {
+	list_additem(asm_state->stack, item);
+}
+
+stackitem_t* asm_stack_pop() {
+	if (asm_state->stack->count > 0) {
+		stackitem_t* item = asm_state->stack->items[asm_state->stack->count - 1];
+		asm_state->stack->count = asm_state->stack->count - 1;
+		return item;
+	} else {
+		return NULL;
 	}
 }

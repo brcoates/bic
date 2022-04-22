@@ -23,6 +23,4 @@ const char* opcode_gettypename(opcode_t opcode);
 
 bool opcode_isopcode(char* str);
 
-list_t* opcode_goperands(opcode_t op);
-
 #endif

@@ -2,6 +2,7 @@
 #define REG_H
 
 #include <stdlib.h>
+#include <stdbool.h>
 #include <include/list.h>
 
 typedef enum {
@@ -13,25 +14,32 @@ typedef enum {
 } regsize_t;
 
 typedef enum {
-	R_RAX 		= RS_64 		| 0x00000000,
-	R_RBX 		= RS_64 		| 0x00000001,
-	R_RCX 		= RS_64 		| 0x00000002,
-	R_RDX 		= RS_64 		| 0x00000004,
-	R_RBP 		= RS_64 		| 0x00000008,
-	R_RSP 		= RS_64 		| 0x00000010,
-	R_EAX 		= RS_32 		| 0x00000000,
-	R_EBX 		= RS_32 		| 0x00000001,
-	R_ECX 		= RS_32 		| 0x00000002,
-	R_EDX 		= RS_32 		| 0x00000004,
-	R_R8 		= RS_64 		| 0x00000020,
-	R_R9 		= RS_64 		| 0x00000040,
-	R_R10 		= RS_64 		| 0x00000080,
-	R_R11 		= RS_64 		| 0x00000100,
-	R_R12 		= RS_64 		| 0x00000200,
-	R_R13 		= RS_64 		| 0x00000400,
-	R_R14 		= RS_64 		| 0x00000800,
-	R_R15 		= RS_64 		| 0x00001000,
-	R_UNKNOWN 	= RS_UNKNOWN 	| 0x00000000
+	RC_GP		= 0x00010000,
+	RC_OTHER	= 0x00020000,
+	RC_UNKNOWN	= 0x00040000
+} regclass_t;
+
+#define REG_NUM_REGISTERS 18
+typedef enum {
+	R_RAX 		= RS_64 		| RC_GP 		| 0x00000000,
+	R_RBX 		= RS_64 		| RC_GP 		| 0x00000001,
+	R_RCX 		= RS_64 		| RC_GP 		| 0x00000002,
+	R_RDX 		= RS_64 		| RC_GP 		| 0x00000004,
+	R_RBP 		= RS_64 		| RC_GP 		| 0x00000008,
+	R_RSP 		= RS_64 		| RC_GP 		| 0x00000010,
+	R_EAX 		= RS_32 		| RC_GP 		| 0x00000000,
+	R_EBX 		= RS_32 		| RC_GP 		| 0x00000001,
+	R_ECX 		= RS_32 		| RC_GP 		| 0x00000002,
+	R_EDX 		= RS_32 		| RC_GP 		| 0x00000004,
+	R_R8 		= RS_64 		| RC_GP 		| 0x00000020,
+	R_R9 		= RS_64 		| RC_GP 		| 0x00000040,
+	R_R10 		= RS_64 		| RC_GP 		| 0x00000080,
+	R_R11 		= RS_64 		| RC_GP 		| 0x00000100,
+	R_R12 		= RS_64 		| RC_GP 		| 0x00000200,
+	R_R13 		= RS_64 		| RC_GP 		| 0x00000400,
+	R_R14 		= RS_64 		| RC_GP 		| 0x00000800,
+	R_R15 		= RS_64 		| RC_GP 		| 0x00001000,
+	R_UNKNOWN 	= RS_UNKNOWN	| RC_UNKNOWN 	| 0x00000000
 } regtype_t;
 
 typedef struct {
@@ -43,6 +51,7 @@ typedef struct {
 const char* reg_getname(regtype_t reg);
 unsigned int reg_getsize(regtype_t reg);
 regtype_t reg_gettype(char* str);
+bool reg_isgeneralpurpose(regtype_t reg);
 
 list_t* reg_getall();
 

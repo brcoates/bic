@@ -50,9 +50,13 @@ char* operand_getnumstr(char* operand_str) {
 const char* operand_gettypename(operandtype_t type) {
 	switch (type) {
 		case OT_r8: return "r8";
+		case OT_r8_al: return "al";
 		case OT_r16: return "r16";
+		case OT_r16_ax: return "ax";
 		case OT_r32: return "r32";
+		case OT_r32_eax: return "eax";
 		case OT_r64: return "r64";
+		case OT_r64_rax: return "rax";
 		case OT_m8: return "m8";
 		case OT_m16: return "m16";
 		case OT_m32: return "m32";
@@ -63,6 +67,6 @@ const char* operand_gettypename(operandtype_t type) {
 		case OT_imm64: return "imm64";
 		case OT_UNKNOWN: 
 		default:
-			return "UNKNOWN";
+			return "??";
 	}
 }

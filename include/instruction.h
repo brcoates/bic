@@ -12,10 +12,11 @@ typedef struct {
 	operandtype_t operand_type;
 } instruction_operand_t;
 instruction_operand_t* ins_operand_create(operandtype_t type);
+instruction_operand_t* ins_operand_from(operand_t* operand);
 
 typedef struct {
 	opcode_t opcode;
-	list_t* operands; // list<instruction_operand_t>
+	list_t* operands; // list<instruction_operand_t*>
 } instruction_t;
 
 void ins_initstate(bool debug_log);
@@ -34,5 +35,8 @@ instruction_t* ins_alloc(opcode_t opcode);
 instruction_t* ins_resolve(opcode_t opcode, int num_operands, ...);
 instruction_t* ins_resolve_fromlist(opcode_t opcode, list_t* operands);
 instruction_t* ins_create(opcode_t opcode, int num_operands, ...);
+
+const char* ins_getsizespecifier(instruction_operand_t* operand);
+char* ins_asm(instruction_t* instruction, list_t* operands); // operands:= list_t<operand_t*>
 
 #endif

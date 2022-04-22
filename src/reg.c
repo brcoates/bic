@@ -84,33 +84,10 @@ unsigned int reg_getsize(regtype_t type) {
 	if (type & RS_32) return 32;
 	if (type & RS_64) return 64;
 	return 0;
+}
 
-// 	switch (type) {
-// 		case R_RAX:
-// 		case R_RBX:
-// 		case R_RCX:
-// 		case R_RDX:
-// 		case R_RBP:
-// 		case R_RSP:
-// 		case R_R8: 
-// 		case R_R9: 
-// 		case R_R10:
-// 		case R_R11:
-// 		case R_R12:
-// 		case R_R13:
-// 		case R_R14:
-// 		case R_R15:
-// 			return 64;
-// 
-// 		case R_EAX:
-// 		case R_EBX:
-// 		case R_ECX:
-// 		case R_EDX:
-// 			return 32;
-// 
-// 		default:
-// 			return 0;
-// 	}
+bool reg_isgeneralpurpose(regtype_t reg) {
+	return reg & RC_GP;
 }
 
 reg_t* reg_create(regtype_t type) {
