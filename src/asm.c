@@ -192,7 +192,7 @@ int asm_proc_getnumargs(node_t* node) {
 void asm_walk_call(node_t* node, context_t* context) {
 	// first thing's first - let's push all registers to the stack to preserve em'
 	asm_ctx_pushad(context);
-	asm_code_append("nop");
+	asm_code_append("nop\n");
 	
 	// finally, restore the stack
 	asm_ctx_popad(context);
@@ -279,38 +279,21 @@ void asm_ctx_pushad(context_t* ctx) {
 	list_t* push_instructions = list_create();
 	for (int i = 0; i < asm_state->registers->count; i++) {
 		reg_t* reg = asm_state->registers->items[i];
-		if (reg_isgeneralpurpose(reg->type)) {
-			// grab the GP register size...
-			operandtype_t op_type;
-
-			assert(reg->sz == 8 || reg->sz == 16 || reg->sz == 32 || reg->sz == 64);
-			switch (reg->sz) {
-				case 8: op_type = OT_r8; break;
-				case 16: op_type = OT_r16; break;
-				case 32: op_type = OT_r32; break;
-				case 64: op_type = OT_r64; break;
-				default: 
-					log_fatal("internal error constructing operand for register with size: %s (%d)\n",
-						reg->name,
-						reg->sz);
-					exit(1);
-					break;
-			}
-
+		if (reg_isgeneralpurpose(reg->type) && reg->sz == 64) {
 			// construct initial push_reg instruction
-			instruction_t* push_reg = ins_resolve(OP_PUSH, 1, op_type);
+			instruction_t* push_reg = ins_resolve(OP_PUSH, 1, OT_r64);
 			if (push_reg == NULL) {
 				log_fatal(
 					"internal error - unable to resolve push instruction (%s 1(%s), asm_ctx_pushad)\n",
 					opcode_gettypename(OP_PUSH),
-					operand_gettypename(op_type)
+					operand_gettypename(OT_r64)
 				);
 				exit(1);
 			}
 
 			// construct push reg, reg operand
 			list_t* operands_tmp = list_create();
-			operand_t* push_reg_operand_reg = operand_create(op_type);
+			operand_t* push_reg_operand_reg = operand_create(OT_r64);
 			push_reg_operand_reg->reg = reg;
 
 			list_additem(operands_tmp, push_reg_operand_reg);
@@ -319,12 +302,10 @@ void asm_ctx_pushad(context_t* ctx) {
 			asm_code_append(push_reg_asm);
 
 			// free everything up
-			free(push_reg);
 			free(push_reg_asm);
 			list_free(operands_tmp);
 		}
 	}
-
 }
 
 void asm_ctx_popad(context_t* ctx) {}
@@ -670,10 +651,10 @@ const char* asm_ins_getsizespecifier(instruction_operand_t* operand) {
 		operand->operand_type & OS_64
 	);
 
-	if (operand->operand_type & OS_8) return "byte";
-	if (operand->operand_type & OS_16) return "word";
-	if (operand->operand_type & OS_32) return "dword";
-	if (operand->operand_type & OS_64) return "qword";
+	if (operand->operand_type & OS_8) return "BYTE";
+	if (operand->operand_type & OS_16) return "WORD";
+	if (operand->operand_type & OS_32) return "DWORD";
+	if (operand->operand_type & OS_64) return "QWORD";
 	return NULL;
 }
 
@@ -713,6 +694,19 @@ char* asm_ins_asm(instruction_t* instruction, list_t* operands) {
 		s_append(result, size_specifier);
 		s_append(result, " ");
 	}
+
+	// now do the operands..
+	for (int i = 0; i < operands->count; i++) {
+		operand_t* operand = operands->items[i];
+		char* operand_asm = asm_ins_resolveoperandasm(operand);
+		s_append(result, operand_asm);
+
+		if (i < operands->count - 1) {
+			s_append(result, ", ");
+		}
+	}
+
+	s_append(result, "\n");
 
 	return result;
 }

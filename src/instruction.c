@@ -27,7 +27,8 @@ void ins_initstate(bool debug_log) {
 		for (int i = 0; i < ins_state->count; i++) {
 			instruction_t* ins = ins_state->items[i];
 			printf(
-				"%s %d(", 
+				"%03d: %s %d(",
+				i,
 				opcode_gettypename(ins->opcode),
 				ins->operands->count
 			);
@@ -40,9 +41,6 @@ void ins_initstate(bool debug_log) {
 			printf(")\n");
 		}
 	}
-
-	if (debug_log && ins_resolve(OP_PUSH, 1, OT_r64) != NULL) printf("Tests passed!\n");
-	else if (debug_log) printf("Tests failed\n");
 }
 
 void ins_init_mov() {
@@ -351,6 +349,7 @@ instruction_t* ins_resolve_fromlist(opcode_t opcode, list_t* operands) {
 		for (int j = 0; j < ins->operands->count && is_same; j++) {
 			instruction_operand_t* operand1 = ins->operands->items[j];
 			instruction_operand_t* operand2 = operands->items[j];
+
 			is_same &= operand1->operand_type == operand2->operand_type;
 		}
 
