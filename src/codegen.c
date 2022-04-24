@@ -5,37 +5,37 @@
 #include <include/codegen.h>
 #include <include/s_util.h>
 
-void print_symbol_table(cg_context_t* context, int depth, int child_idx);
+void print_symbol_table(scope_t* scope, int depth, int child_idx);
 
-static cg_context_t* root_context = NULL;
+static scope_t* root_scope = NULL;
 
 void cg_init() {
-	if (root_context != NULL) {
-		free(root_context);
+	if (root_scope != NULL) {
+		free(root_scope);
 	}
-	root_context = cg_context_create();
+	root_scope = cg_scope_create();
 }
 
 char* codegen(parse_t* parse_root) {
 	cg_init();
-	cg_walk(root_context, parse_root->node_head);
+	cg_walk(root_scope, parse_root->node_head);
 
-	print_symbol_table(root_context, 0, 0);
+	print_symbol_table(root_scope, 0, 0);
 
 	return "not implemented";
 }
 
-void print_symbol_table(cg_context_t* context, int depth, int child_idx) {
+void print_symbol_table(scope_t* scope, int depth, int child_idx) {
 	printf("TABLE (depth = %d; idx = %d):\n", depth, child_idx);
-	for (int i = 0; i < context->symbols->count; i++) {
-		symbol_t* symbol = context->symbols->items[i];
+	for (int i = 0; i < scope->symbols->count; i++) {
+		symbol_t* symbol = scope->symbols->items[i];
 		printf("\t%s (%s)\n", symbol->label, cg_symbol_gettypename(symbol->symbol_type));
 	}
-	if (context->inner != NULL) print_symbol_table(context->inner, depth + 1, 0);
-	if (context->next != NULL) print_symbol_table(context->next, depth, child_idx + 1);
+	if (scope->inner != NULL) print_symbol_table(scope->inner, depth + 1, 0);
+	if (scope->next != NULL) print_symbol_table(scope->next, depth, child_idx + 1);
 }
 
-void cg_walk(cg_context_t* root_context, node_t* node) {
+void cg_walk(scope_t* root_scope, node_t* node) {
 	// here we need to basically just walk all nodes recursively (bottom down, pre-order)... the goal of this is
 	// essentially:
 	// 1. identify all symbols
@@ -43,7 +43,7 @@ void cg_walk(cg_context_t* root_context, node_t* node) {
 	
 	if (node == NULL) return;
 
-	cg_context_t* ctx = root_context;
+	scope_t* ctx = root_scope;
 
 	symbol_type_t symbol_type;
 	switch (node->type) {
@@ -58,22 +58,22 @@ void cg_walk(cg_context_t* root_context, node_t* node) {
 		cg_symbol_add(ctx, cg_symbol_create(symbol_type, node->token->str));
 	}
 
-	// if we have a proc declaration, let's go ahead and create a context for this one...
+	// if we have a proc declaration, let's go ahead and create a scope for this one...
 	if (symbol_type == ST_PROC) {
-		cg_context_t* proc_ctx = cg_context_create();
+		scope_t* proc_scope = cg_scope_create();
 
 		if (ctx->inner == NULL) {
-			ctx->inner = proc_ctx;
+			ctx->inner = proc_scope;
 		} else {
 			// if we already have an inner, then we need to append us to the end. to do this, first, let's
 			// actually find this 'end'/tail.
-			cg_context_t* tail = ctx->inner;
+			scope_t* tail = ctx->inner;
 			while (tail->next != NULL) tail = tail->next;
 
-			tail->next = proc_ctx;
+			tail->next = proc_scope;
 		}
-		proc_ctx->parent = ctx;
-		ctx = proc_ctx;
+		proc_scope->parent = ctx;
+		ctx = proc_scope;
 	} 
 
 	cg_walk(ctx, node->body);
@@ -86,27 +86,27 @@ void cg_walk(cg_context_t* root_context, node_t* node) {
 	cg_walk(ctx, node->next);
 }
 
-cg_context_t* cg_context_create() {
-	cg_context_t* context = calloc(1, sizeof(cg_context_t));
-	context->symbols = list_create();
-	return context;
+scope_t* cg_scope_create() {
+	scope_t* scope = calloc(1, sizeof(scope_t));
+	scope->symbols = list_create();
+	return scope;
 }
 
-symbol_t* cg_symbol_resolve(cg_context_t* context, char* label) {
-	for (int i = 0; i < context->symbols->count; i++) {
-		symbol_t* symbol = context->symbols->items[i];
+symbol_t* cg_symbol_resolve(scope_t* scope, char* label) {
+	for (int i = 0; i < scope->symbols->count; i++) {
+		symbol_t* symbol = scope->symbols->items[i];
 		assert(symbol != NULL);
 		if (s_eq(label, symbol->label)) {
 			return symbol;
 		}
 	}
-	if (context->inner != NULL) return cg_symbol_resolve(context->inner, label);
-	if (context->next != NULL) return cg_symbol_resolve(context->next, label);
+	if (scope->inner != NULL) return cg_symbol_resolve(scope->inner, label);
+	if (scope->next != NULL) return cg_symbol_resolve(scope->next, label);
 	return NULL;
 }
 
-void cg_symbol_add(cg_context_t* context, symbol_t* symbol) {
-	list_additem(context->symbols, symbol);
+void cg_symbol_add(scope_t* scope, symbol_t* symbol) {
+	list_additem(scope->symbols, symbol);
 }
 
 symbol_t* cg_symbol_create(symbol_type_t type, char* label) {

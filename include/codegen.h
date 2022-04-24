@@ -4,14 +4,14 @@
 #include <include/list.h>
 #include <include/parse.h>
 
-typedef struct cg_context cg_context_t;
-struct cg_context {
+typedef struct scope scope_t;
+struct scope {
 	list_t* symbols;
-	cg_context_t* parent;
-	cg_context_t* next;
-	cg_context_t* inner;
+	scope_t* parent;
+	scope_t* next;
+	scope_t* inner;
 };
-cg_context_t* cg_context_create();
+scope_t* cg_scope_create();
 
 // symbols ---
 typedef enum {
@@ -28,8 +28,8 @@ typedef struct {
 typedef struct {
 	list_t* symbols; // list<symbol_t*>
 } symbol_table_t;
-symbol_t* cg_symbol_resolve(cg_context_t* context, char* label);
-void cg_symbol_add(cg_context_t* context, symbol_t* symbol);
+symbol_t* cg_symbol_resolve(scope_t* scope, char* label);
+void cg_symbol_add(scope_t* scope, symbol_t* symbol);
 symbol_t* cg_symbol_create(symbol_type_t type, char* label);
 const char* cg_symbol_gettypename(symbol_type_t type);
 // ---
@@ -37,6 +37,6 @@ const char* cg_symbol_gettypename(symbol_type_t type);
 void cg_init();
 char* codegen(parse_t* parse_root);
 
-void cg_walk(cg_context_t* root_context, node_t* node);
+void cg_walk(scope_t* root_scope, node_t* node);
 
 #endif
