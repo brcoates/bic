@@ -358,6 +358,7 @@ const char* parse_getnodetypename(nodetype_t type) {
 		case NT_CALL_ARG: return "NT_CALL_ARG";
 		case NT_CALL_ARGS_LIST: return "NT_CALL_ARGS_LIST";
 		case NT_DIRECTIVE: return "NT_DIRECTIVE";
+		case NT_DIRECTIVE_ARG: return "NT_DIRECTIVE_ARG";
 		default: return NULL;
 	}
 }
