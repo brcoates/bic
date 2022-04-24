@@ -11,6 +11,6 @@ endproc
 
 proc main:
 begin
-	call sum 1, 2
-	call printf "%d + %d = %d", 1, 2, rax
+	call sum $1, $2
+	call printf "%d + %d = %d", $1, $2, rax
 endproc

@@ -192,8 +192,9 @@ int asm_proc_getnumargs(node_t* node) {
 void asm_walk_call(node_t* node, context_t* context) {
 	// first thing's first - let's push all registers to the stack to preserve em'
 	asm_ctx_pushad(context);
-	asm_code_append("nop\n");
 	
+	// now, add all our 
+
 	// finally, restore the stack
 	asm_ctx_popad(context);
 }
@@ -605,7 +606,7 @@ void asm_symbol_printtable() {
 		printf("symbol { name = '%s'; flags = ", sym->name);
 
 		int num_flags = 0;
-		if (sym->flags & SF_UNKNOWN) asm_symbol_printtable_flag(&num_flags, sym, SF_UNKNOWN, "SF_");
+		if (sym->flags & SF_UNKNOWN) asm_symbol_printtable_flag(&num_flags, sym, SF_UNKNOWN, "SF_??");
 		if (sym->flags & SF_PROC) asm_symbol_printtable_flag(&num_flags, sym, SF_PROC, "SF_PROC");
 		if (sym->flags & SF_PROC_ARG) asm_symbol_printtable_flag(&num_flags, sym, SF_PROC_ARG, "SF_PROC_ARG");
 		if (sym->flags & SF_VAR) asm_symbol_printtable_flag(&num_flags, sym, SF_VAR, "SF_VAR");

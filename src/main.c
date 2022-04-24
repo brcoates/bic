@@ -6,7 +6,7 @@
 
 #include <include/scan.h>
 #include <include/parse.h>
-#include <include/asm.h>
+#include <include/codegen.h>
 #include <include/log.h>
 #include <include/s_util.h>
 
@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
 		printf("\n");
 	}
 
-	char* asm_output = asm_codegen(parse_root);
+	char* asm_output = codegen(parse_root);
 	if (options->debug_options->print_asm) {
 		printf("%s", asm_output);
 	}
