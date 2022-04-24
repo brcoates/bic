@@ -17,6 +17,7 @@ static struct options {
 		bool print_asm;
 	} * debug_options;
 	char* input_filename;
+	bool emit_asm;
 } * options;
 
 void print_node(node_t* root, char* prefix, int n, bool in_body);
@@ -57,9 +58,11 @@ int main(int argc, char** argv) {
 		printf("\n");
 	}
 
-	char* asm_output = codegen(parse_root);
-	if (options->debug_options->print_asm) {
-		printf("%s", asm_output);
+	if (options->emit_asm) {
+		char* asm_output = codegen(parse_root);
+		if (options->debug_options->print_asm) {
+			printf("%s", asm_output);
+		}
 	}
 
 	options_dispose();
@@ -115,6 +118,7 @@ void options_setup(int argc, char** argv) {
 	options->debug_options->print_scans = false;
 	options->debug_options->print_parse = false; 
 	options->debug_options->print_asm = true;
+	options->emit_asm = true;
 	if (argc > 1) {
 		for (int i = 1; i < argc; i++) {
 			char* arg = argv[i];
@@ -123,7 +127,7 @@ void options_setup(int argc, char** argv) {
 			if (s_eqi(arg, "--debug-scan")) options->debug_options->print_scans = true;
 			else if (s_eqi(arg, "--debug-parse")) options->debug_options->print_parse = true;
 			else if (s_eqi(arg, "--no-asm")) options->debug_options->print_asm = false;
-			else if (s_eqi(arg, "--help")) options_printhelp();
+			else if (s_eqi(arg, "--help")) { options->emit_asm = false; options_printhelp(); }
 		}
 	}
 }
